@@ -16,7 +16,6 @@ import '../services/storage_service.dart';
 /// – Connects, subscribes to characteristic, parses JSON packets.
 /// – Heartbeat watchdog (5 s) — triggers disconnect notification.
 /// – Auto-reconnect with back-off.
-/// – In mock mode, streams synthetic health data every 3 s.
 class BleService {
   BleService._();
   static final BleService instance = BleService._();
@@ -28,86 +27,111 @@ class BleService {
   final _deviceCtrl = StreamController<DeviceStatusModel>.broadcast();
   Stream<DeviceStatusModel> get deviceStream => _deviceCtrl.stream;
 
+  final _scanResultsCtrl = StreamController<List<ScanResult>>.broadcast();
+  Stream<List<ScanResult>> get scanResultsStream => _scanResultsCtrl.stream;
+
+  final _scanningCtrl = StreamController<bool>.broadcast();
+  Stream<bool> get scanningStream => _scanningCtrl.stream;
+
   // ─── State ────────────────────────────────────────────────────────────────────
   DeviceStatusModel _deviceStatus = DeviceStatusModel.initial();
   BluetoothDevice?  _watchDevice;
   BluetoothDevice?  _simDevice;
   Timer?            _heartbeatTimer;
   Timer?            _reconnectTimer;
-  Timer?            _mockTimer;
   DateTime?         _lastPacketTime;
   bool              _destroyed = false;
+  bool              _isScanning = false;
+
+  final List<ScanResult> _scanResults = [];
 
   int _reconnectAttempts = 0;
   static const _maxReconnectDelaySec = 10;
 
   // ─── Start / Stop ────────────────────────────────────────────────────────────
   Future<void> start() async {
-    if (AppConstants.useMockData) {
-      _startMockMode();
-      return;
-    }
-    await _startScan();
+    await _startAutoScan();
   }
 
   void dispose() {
     _destroyed = true;
     _heartbeatTimer?.cancel();
     _reconnectTimer?.cancel();
-    _mockTimer?.cancel();
     _watchDevice?.disconnect();
     _simDevice?.disconnect();
     _healthCtrl.close();
     _deviceCtrl.close();
+    _scanResultsCtrl.close();
+    _scanningCtrl.close();
   }
 
-  // ─── Mock / Demo mode ────────────────────────────────────────────────────────
-  void _startMockMode() {
-    debugPrint('[BLE] *** MOCK MODE ACTIVE ***');
-
-    // Immediately emit "connected" status for both devices
-    _updateDeviceStatus(_deviceStatus.copyWith(
-      watch: DeviceInfo(
-        id:             'mock-watch-001',
-        name:           'Pregnancy Watch',
-        status:         ConnectionStatus.connected,
-        batteryPercent: 85,
-        signalLevel:    90,
-        lastSeen:       DateTime.now(),
-      ),
-      simUnit: DeviceInfo(
-        id:             'mock-sim-001',
-        name:           'SIM Unit Pro',
-        status:         ConnectionStatus.connected,
-        batteryPercent: 72,
-        signalLevel:    75,
-        lastSeen:       DateTime.now(),
-      ),
-    ));
-
-    // Stream a new mock packet every 3 seconds with slight variation
-    final rng = Random();
-    _mockTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (_destroyed) return;
-      final baseHr    = 82;
-      final hr        = baseHr + rng.nextInt(6) - 3;
-      final baseTemp  = 36.7;
-      final temp      = baseTemp + (rng.nextInt(4) - 2) * 0.1;
-
-      final packet = HealthDataModel.mock().copyWith(
-        heartRate:   hr,
-        temperature: double.parse(temp.toStringAsFixed(1)),
-        receivedAt:  DateTime.now(),
-      );
-      _onPacketReceived(packet);
-    });
-  }
-
-  // ─── BLE Scan ────────────────────────────────────────────────────────────────
-  Future<void> _startScan() async {
-    debugPrint('[BLE] Starting scan...');
+  // ─── Auto scan (background, on start) ───────────────────────────────────────
+  Future<void> _startAutoScan() async {
+    debugPrint('[BLE] Starting auto-scan...');
     _updateWatchStatus(ConnectionStatus.scanning);
+    await _runScan(autoConnect: true);
+  }
 
+  // ─── Manual scan (UI-initiated, shows all SafeNest devices) ─────────────────
+  Future<void> startManualScan() async {
+    if (_isScanning) {
+      await FlutterBluePlus.stopScan();
+    }
+    _scanResults.clear();
+    _scanResultsCtrl.add([]);
+    _scanningCtrl.add(true);
+    _isScanning = true;
+    debugPrint('[BLE] Starting manual scan...');
+
+    try {
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: AppConstants.scanTimeoutSec),
+      );
+
+      FlutterBluePlus.scanResults.listen((results) {
+        // Show any SafeNest device (or any device if none found yet)
+        final filtered = results.where((r) =>
+            r.device.platformName.startsWith(AppConstants.safeNestPrefix) ||
+            r.device.platformName.isNotEmpty,
+        ).toList();
+        _scanResults
+          ..clear()
+          ..addAll(filtered);
+        if (!_scanResultsCtrl.isClosed) {
+          _scanResultsCtrl.add(List.from(_scanResults));
+        }
+      });
+
+      // Wait for scan to finish
+      await FlutterBluePlus.isScanning
+          .firstWhere((scanning) => !scanning)
+          .timeout(
+        const Duration(seconds: AppConstants.scanTimeoutSec + 2),
+        onTimeout: () => false,
+      );
+    } catch (e) {
+      debugPrint('[BLE] Manual scan error: $e');
+    } finally {
+      _isScanning = false;
+      if (!_scanningCtrl.isClosed) _scanningCtrl.add(false);
+    }
+  }
+
+  // ─── Connect to a user-selected device ──────────────────────────────────────
+  Future<void> connectToDevice(BluetoothDevice device) async {
+    final name = device.platformName;
+    if (name.startsWith(AppConstants.watchNamePrefix)) {
+      await _connectToWatch(device);
+    } else if (name.startsWith(AppConstants.simUnitNamePrefix)) {
+      await _connectToSim(device);
+    } else {
+      // Unknown device — try as watch
+      await _connectToWatch(device);
+    }
+  }
+
+  // ─── Internal BLE Scan (auto-mode) ───────────────────────────────────────────
+  Future<void> _runScan({bool autoConnect = false}) async {
     try {
       await FlutterBluePlus.startScan(
         timeout: Duration(seconds: AppConstants.scanTimeoutSec),
@@ -116,13 +140,15 @@ class BleService {
       FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
           final name = r.device.platformName;
-          if (name.startsWith(AppConstants.watchNamePrefix) &&
-              _watchDevice == null) {
-            _connectToWatch(r.device, rssi: r.rssi);
-          }
-          if (name.startsWith(AppConstants.simUnitNamePrefix) &&
-              _simDevice == null) {
-            _connectToSim(r.device, rssi: r.rssi);
+          if (autoConnect) {
+            if (name.startsWith(AppConstants.watchNamePrefix) &&
+                _watchDevice == null) {
+              _connectToWatch(r.device, rssi: r.rssi);
+            }
+            if (name.startsWith(AppConstants.simUnitNamePrefix) &&
+                _simDevice == null) {
+              _connectToSim(r.device, rssi: r.rssi);
+            }
           }
         }
       });
@@ -141,12 +167,15 @@ class BleService {
       await device.connect(timeout: const Duration(seconds: 15));
       final signalLevel = _rssiToLevel(rssi);
 
+      // Battery is unknown until read from BLE characteristic
       _updateDeviceStatus(_deviceStatus.copyWith(
         watch: DeviceInfo(
           id:             device.remoteId.str,
-          name:           'Pregnancy Watch',
+          name:           device.platformName.isNotEmpty
+              ? device.platformName
+              : 'SafeNest Watch',
           status:         ConnectionStatus.connected,
-          batteryPercent: 85,
+          batteryPercent: 0,   // will be updated when BLE battery attribute is read
           signalLevel:    signalLevel,
           lastSeen:       DateTime.now(),
         ),
@@ -182,9 +211,11 @@ class BleService {
       _updateDeviceStatus(_deviceStatus.copyWith(
         simUnit: DeviceInfo(
           id:             device.remoteId.str,
-          name:           'SIM Unit Pro',
+          name:           device.platformName.isNotEmpty
+              ? device.platformName
+              : 'SafeNest SIM',
           status:         ConnectionStatus.connected,
-          batteryPercent: 72,
+          batteryPercent: 0,   // unknown until read from BLE
           signalLevel:    signalLevel,
           lastSeen:       DateTime.now(),
         ),
@@ -219,13 +250,13 @@ class BleService {
                 final model = HealthDataModel.fromJsonString(raw);
                 _onPacketReceived(model);
               });
-              debugPrint('[BLE] Subscribed to characteristic');
+              debugPrint('[BLE] Subscribed to health characteristic');
               return;
             }
           }
         }
       }
-      debugPrint('[BLE] Characteristic not found — check UUIDs in constants.dart');
+      debugPrint('[BLE] Characteristic not found — update UUIDs in constants.dart');
     } catch (e) {
       debugPrint('[BLE] Service discovery error: $e');
     }
@@ -234,7 +265,25 @@ class BleService {
   // ─── Packet received ─────────────────────────────────────────────────────────
   void _onPacketReceived(HealthDataModel model) {
     _lastPacketTime = DateTime.now();
-    _healthCtrl.add(model);
+    if (!_healthCtrl.isClosed) _healthCtrl.add(model);
+
+    // Update battery from BLE packet if provided
+    if (model.watchBattery > 0) {
+      _updateDeviceStatus(_deviceStatus.copyWith(
+        watch: _deviceStatus.watch.copyWith(
+          batteryPercent: model.watchBattery,
+          lastSeen: DateTime.now(),
+        ),
+      ));
+    }
+    if (model.simBattery > 0) {
+      _updateDeviceStatus(_deviceStatus.copyWith(
+        simUnit: _deviceStatus.simUnit.copyWith(
+          batteryPercent: model.simBattery,
+          lastSeen: DateTime.now(),
+        ),
+      ));
+    }
 
     // Persist to local cache
     StorageService.setLastHealthPacket(model.toJsonString());
@@ -276,8 +325,8 @@ class BleService {
     _heartbeatTimer?.cancel();
     _watchDevice = null;
     _updateWatchStatus(ConnectionStatus.disconnected);
-    NotificationService.showDeviceDisconnected('Pregnancy Watch');
-    _scheduleReconnect(() => _startScan());
+    NotificationService.showDeviceDisconnected('SafeNest Watch');
+    _scheduleReconnect(() => _startAutoScan());
   }
 
   void _onSimDisconnected() {
@@ -285,7 +334,7 @@ class BleService {
     _simDevice = null;
     _updateSimStatus(ConnectionStatus.disconnected);
     NotificationService.showSimError();
-    _scheduleReconnect(() => _startScan());
+    _scheduleReconnect(() => _startAutoScan());
   }
 
   // ─── Auto-reconnect ──────────────────────────────────────────────────────────
@@ -306,11 +355,7 @@ class BleService {
   /// Allows UI to manually trigger a reconnect attempt.
   Future<void> reconnect() async {
     _reconnectAttempts = 0;
-    if (AppConstants.useMockData) {
-      _startMockMode();
-    } else {
-      await _startScan();
-    }
+    await _startAutoScan();
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -328,7 +373,7 @@ class BleService {
 
   void _updateDeviceStatus(DeviceStatusModel updated) {
     _deviceStatus = updated;
-    if (!_destroyed) _deviceCtrl.add(updated);
+    if (!_destroyed && !_deviceCtrl.isClosed) _deviceCtrl.add(updated);
   }
 
   int _rssiToLevel(int rssi) {

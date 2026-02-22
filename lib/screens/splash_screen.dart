@@ -66,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Container(
                           width: 250, height: 250,
                           decoration: BoxDecoration(
-                            color:  Colors.white.withValues(alpha: 0.05),
+                            color:  Colors.white.withOpacity(0.05),
                             shape:  BoxShape.circle,
                           ),
                         ),
@@ -76,7 +76,7 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Container(
                           width: 180, height: 180,
                           decoration: BoxDecoration(
-                            color:  Colors.white.withValues(alpha: 0.05),
+                            color:  Colors.white.withOpacity(0.05),
                             shape:  BoxShape.circle,
                           ),
                         ),
@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
                           Container(
                             width: 120, height: 120,
                             decoration: BoxDecoration(
-                              color:  Colors.white.withValues(alpha: 0.1),
+                              color:  Colors.white.withOpacity(0.1),
                               shape:  BoxShape.circle,
                             ),
                             child: Stack(
@@ -130,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen>
                             style: GoogleFonts.inter(
                               fontSize:   17,
                               fontWeight: FontWeight.w400,
-                              color:      Colors.white.withValues(alpha: 0.82),
+                              color:      Colors.white.withOpacity(0.82),
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -150,7 +150,7 @@ class _SplashScreenState extends State<SplashScreen>
                           fontSize:      10,
                           fontWeight:    FontWeight.w500,
                           letterSpacing: 3,
-                          color:         Colors.white.withValues(alpha: 0.6),
+                          color:         Colors.white.withOpacity(0.6),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -158,7 +158,7 @@ class _SplashScreenState extends State<SplashScreen>
                       Container(
                         width: 120, height: 4,
                         decoration: BoxDecoration(
-                          color:        Colors.white.withValues(alpha: 0.3),
+                          color:        Colors.white.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),

@@ -1,46 +1,61 @@
 // lib/models/pregnancy_model.dart
 
 class PregnancyModel {
-  final int pregnancyWeek;
+  final DateTime? startDate;
   final String userName;
+  final int? manualWeek; // Fallback if no start date
 
   const PregnancyModel({
-    required this.pregnancyWeek,
-    this.userName = 'Sarah',
+    this.startDate,
+    this.userName   = 'Sarah',
+    this.manualWeek,
   });
 
-  factory PregnancyModel.defaults() => const PregnancyModel(
-    pregnancyWeek: 22,
-    userName:      'Sarah',
+  factory PregnancyModel.defaults() => PregnancyModel(
+    startDate: DateTime.now().subtract(const Duration(days: 154)), // ~22 weeks ago
+    userName:  'Sarah',
   );
 
-  // ─── Derived values ─────────────────────────────────────────────────────────
+  // ─── Calculations ──────────────────────────────────────────────────────────
+  int get pregnancyWeek {
+    if (startDate == null) return manualWeek ?? 0;
+    final diff = DateTime.now().difference(startDate!);
+    final weeks = (diff.inDays / 7).floor();
+    return weeks.clamp(0, 42); 
+  }
+
   int get pregnancyMonth {
-    if (pregnancyWeek <= 4)  return 1;
-    if (pregnancyWeek <= 8)  return 2;
-    if (pregnancyWeek <= 13) return 3;
-    if (pregnancyWeek <= 17) return 4;
-    if (pregnancyWeek <= 21) return 5;
-    if (pregnancyWeek <= 26) return 6;
-    if (pregnancyWeek <= 30) return 7;
-    if (pregnancyWeek <= 35) return 8;
+    final w = pregnancyWeek;
+    if (w <= 4)  return 1;
+    if (w <= 8)  return 2;
+    if (w <= 13) return 3;
+    if (w <= 17) return 4;
+    if (w <= 21) return 5;
+    if (w <= 26) return 6;
+    if (w <= 30) return 7;
+    if (w <= 35) return 8;
     return 9;
   }
 
   String get trimesterLabel {
-    if (pregnancyWeek <= 13) return 'First Trimester';
-    if (pregnancyWeek <= 26) return 'Second Trimester';
-    return 'Third Trimester';
+    final w = pregnancyWeek;
+    if (w <= 13) return 'FIRST TRIMESTER';
+    if (w <= 26) return 'SECOND TRIMESTER';
+    return 'THIRD TRIMESTER';
   }
 
-  int get daysRemaining {
+  int get daysToGo {
     const totalDays = 280; // 40 weeks
     final elapsed = pregnancyWeek * 7;
     return (totalDays - elapsed).clamp(0, totalDays);
   }
 
-  DateTime get estimatedDueDate =>
-      DateTime.now().add(Duration(days: daysRemaining));
+  DateTime get estimatedDueDate {
+    if (startDate != null) {
+      return startDate!.add(const Duration(days: 280));
+    }
+    return DateTime.now().add(Duration(days: daysToGo));
+  }
 
   String get estimatedDueDateLabel {
     final d = estimatedDueDate;
@@ -53,10 +68,6 @@ class PregnancyModel {
 
   double get progressFraction => (pregnancyWeek / 40.0).clamp(0.0, 1.0);
 
-  String get weekLabel => 'Week $pregnancyWeek';
-  String get monthLabel => 'Month $pregnancyMonth';
-  String get daysRemainingLabel => '$daysRemaining days to go';
-
   String get greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
@@ -64,9 +75,12 @@ class PregnancyModel {
     return 'Good evening';
   }
 
-  PregnancyModel copyWith({int? pregnancyWeek, String? userName}) =>
+  bool get hasData => startDate != null || manualWeek != null;
+
+  PregnancyModel copyWith({DateTime? startDate, String? userName, int? manualWeek}) =>
       PregnancyModel(
-        pregnancyWeek: pregnancyWeek ?? this.pregnancyWeek,
-        userName:      userName      ?? this.userName,
+        startDate:  startDate  ?? this.startDate,
+        userName:   userName   ?? this.userName,
+        manualWeek: manualWeek ?? this.manualWeek,
       );
 }

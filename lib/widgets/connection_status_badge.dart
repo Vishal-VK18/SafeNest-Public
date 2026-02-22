@@ -43,7 +43,7 @@ class ConnectionStatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color:        bg,
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: dotColor.withValues(alpha: 0.3)),
+        border:       Border.all(color: dotColor.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

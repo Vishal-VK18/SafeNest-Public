@@ -75,7 +75,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color:        AppColors.primary.withValues(alpha: 0.15),
+                      color:        AppColors.primary.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -119,7 +119,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                       width: MediaQuery.of(context).size.width * 1.2,
                       height: 200,
                       decoration: BoxDecoration(
-                        color:  AppColors.dangerRed.withValues(alpha: 0.05),
+                        color:  AppColors.dangerRed.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(200),
                       ),
                     ),
@@ -131,7 +131,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                       width: MediaQuery.of(context).size.width * 1.2,
                       height: 200,
                       decoration: BoxDecoration(
-                        color:  AppColors.primary.withValues(alpha: 0.08),
+                        color:  AppColors.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(200),
                       ),
                     ),
@@ -160,7 +160,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                               shape:     BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color:      AppColors.dangerRed.withValues(alpha: 0.35),
+                                  color:      AppColors.dangerRed.withOpacity(0.35),
                                   blurRadius: 24, offset: const Offset(0, 8),
                                 ),
                               ],
@@ -211,10 +211,10 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                           decoration: BoxDecoration(
                             color:        Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            border:       Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                            border:       Border.all(color: AppColors.primary.withOpacity(0.2)),
                             boxShadow: [
                               BoxShadow(
-                                color:      Colors.black.withValues(alpha: 0.05),
+                                color:      Colors.black.withOpacity(0.05),
                                 blurRadius: 14,
                               ),
                             ],
@@ -252,7 +252,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                                   ),
                                 ],
                               ),
-                              Container(width: 1, height: 40, color: AppColors.primary.withValues(alpha: 0.2)),
+                              Container(width: 1, height: 40, color: AppColors.primary.withOpacity(0.2)),
                               Column(
                                 children: [
                                   Text(
@@ -339,7 +339,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                             fontSize: 20, fontWeight: FontWeight.w800,
                           ),
                           elevation: 12,
-                          shadowColor: AppColors.dangerRed.withValues(alpha: 0.4),
+                          shadowColor: AppColors.dangerRed.withOpacity(0.4),
                         ),
                       ),
                     ),
@@ -378,7 +378,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                             decoration: BoxDecoration(
                               color:  i < 2
                                   ? AppColors.primary
-                                  : AppColors.primary.withValues(alpha: 0.3),
+                                  : AppColors.primary.withOpacity(0.3),
                               shape:  BoxShape.circle,
                               border: Border.all(color: AppColors.bgLight, width: 3),
                             ),

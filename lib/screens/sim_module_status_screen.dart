@@ -47,10 +47,10 @@ class SimModuleStatusScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color:        Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border:       Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+                  border:       Border.all(color: AppColors.primary.withOpacity(0.12)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: Colors.black.withOpacity(0.05),
                       blurRadius: 14, offset: const Offset(0, 4),
                     ),
                   ],
@@ -67,7 +67,7 @@ class SimModuleStatusScreen extends ConsumerWidget {
                     Container(
                       width: 80, height: 80,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: AppColors.primary.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -124,16 +124,16 @@ class SimModuleStatusScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color:        AppColors.warningYellow.withValues(alpha: 0.2),
+                    color:        AppColors.warningYellow.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
-                    border:       Border.all(color: AppColors.warningYellow.withValues(alpha: 0.5)),
+                    border:       Border.all(color: AppColors.warningYellow.withOpacity(0.5)),
                   ),
                   child: Row(
                     children: [
                       Container(
                         width: 44, height: 44,
                         decoration: BoxDecoration(
-                          color: AppColors.warningYellow.withValues(alpha: 0.3),
+                          color: AppColors.warningYellow.withOpacity(0.3),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.error_outline, color: Colors.orange),
@@ -153,7 +153,7 @@ class SimModuleStatusScreen extends ConsumerWidget {
                             Text(
                               'Alerts will be sent through the mobile app. Please ensure your phone is nearby.',
                               style: GoogleFonts.inter(
-                                fontSize: 12, color: Colors.orange[800]!.withValues(alpha: 0.8),
+                                fontSize: 12, color: Colors.orange[800]!.withOpacity(0.8),
                               ),
                             ),
                           ],
@@ -177,7 +177,7 @@ class SimModuleStatusScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color:        Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border:       Border.all(color: AppColors.primary.withValues(alpha: 0.07)),
+                  border:       Border.all(color: AppColors.primary.withOpacity(0.07)),
                 ),
                 child: Column(
                   children: [
@@ -221,7 +221,7 @@ class SimModuleStatusScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color:        AppColors.primary.withValues(alpha: 0.07),
+                  color:        AppColors.primary.withOpacity(0.07),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
@@ -251,7 +251,7 @@ class SimModuleStatusScreen extends ConsumerWidget {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(54),
                   foregroundColor: AppColors.primary,
-                  side:       BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                  side:       BorderSide(color: AppColors.primary.withOpacity(0.4)),
                   shape:      const StadiumBorder(),
                 ),
                 child: const Text('Troubleshoot Connection'),
@@ -340,7 +340,7 @@ class _InfoRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              Icon(icon, color: AppColors.primary.withValues(alpha: 0.6), size: 20),
+              Icon(icon, color: AppColors.primary.withOpacity(0.6), size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

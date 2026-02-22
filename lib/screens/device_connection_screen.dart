@@ -1,8 +1,10 @@
 // lib/screens/device_connection_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/providers.dart';
+import '../providers/system_providers.dart';
 import '../models/device_status_model.dart';
 import '../utils/app_theme.dart';
 import '../widgets/connection_status_badge.dart';
@@ -14,8 +16,13 @@ class DeviceConnectionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final deviceStatus = ref.watch(deviceStatusProvider);
-    final health       = ref.watch(healthDataProvider);
+    final deviceStatus     = ref.watch(deviceStatusProvider);
+    final health           = ref.watch(healthDataProvider);
+    final btStateAsync     = ref.watch(bluetoothStateProvider);
+    final networkNameAsync = ref.watch(networkNameProvider);
+
+    final isBluetoothOn = btStateAsync.value == BluetoothAdapterState.on;
+    final networkName   = networkNameAsync.value ?? 'Checking...';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -29,7 +36,7 @@ class DeviceConnectionScreen extends ConsumerWidget {
               child: Container(
                 width: 280, height: 280,
                 decoration: BoxDecoration(
-                  color: AppColors.softLilac.withValues(alpha: 0.4),
+                  color: AppColors.softLilac.withOpacity(0.4),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -40,7 +47,7 @@ class DeviceConnectionScreen extends ConsumerWidget {
               child: Container(
                 width: 280, height: 280,
                 decoration: BoxDecoration(
-                  color: AppColors.softLilac.withValues(alpha: 0.4),
+                  color: AppColors.softLilac.withOpacity(0.4),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -54,7 +61,10 @@ class DeviceConnectionScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                      ),
                       Expanded(
                         child: Text(
                           'Device Connectivity',
@@ -65,46 +75,56 @@ class DeviceConnectionScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 40),
+                      const SizedBox(width: 48),
                     ],
                   ),
                   const SizedBox(height: 24),
 
-                  // Primary Devices label
+                  // ── WEARABLE SECTION ─────────────────────────────────────
                   Text(
-                    'PRIMARY DEVICES',
+                    'WEARABLE DEVICE',
                     style: GoogleFonts.inter(
                       fontSize: 10, fontWeight: FontWeight.w700,
                       color: Colors.grey[400], letterSpacing: 2,
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Watch card
                   _DeviceCard(
-                    icon:   Icons.watch,
-                    type:   'WEARABLE',
-                    name:   deviceStatus.watch.name,
-                    status: deviceStatus.watch.status,
-                    battery: health.watchBattery,
+                    icon:    Icons.watch,
+                    type:    'WEARABLE',
+                    name:    deviceStatus.watch.isConnected
+                        ? deviceStatus.watch.name
+                        : 'Not Paired',
+                    status:  deviceStatus.watch.status,
+                    battery: deviceStatus.watch.isConnected ? health.watchBattery : 0,
                     signal:  _levelToSignal(deviceStatus.watch.signalLevel),
-                    onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // SIM unit card
-                  _DeviceCard(
-                    icon:    Icons.router,
-                    type:    'BASE STATION',
-                    name:    deviceStatus.simUnit.name,
-                    status:  deviceStatus.simUnit.status,
-                    battery: health.simBattery,
-                    signal:  _levelToSignal(deviceStatus.simUnit.signalLevel),
                     onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
                   ),
                   const SizedBox(height: 28),
 
-                  // Global connectivity section
+                  // ── SIM MODULE SECTION ───────────────────────────────────
+                  Text(
+                    'SIM MODULE',
+                    style: GoogleFonts.inter(
+                      fontSize: 10, fontWeight: FontWeight.w700,
+                      color: Colors.grey[400], letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _SimModuleCard(
+                    status:      deviceStatus.simUnit.status,
+                    name:        deviceStatus.simUnit.isConnected
+                        ? deviceStatus.simUnit.name
+                        : 'Not Paired',
+                    battery:     deviceStatus.simUnit.isConnected ? health.simBattery : 0,
+                    signal:      _levelToSignal(deviceStatus.simUnit.signalLevel),
+                    networkType: health.networkType,
+                    simSignal:   health.simSignal,
+                    onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // ── GLOBAL CONNECTIVITY (Real Hardware) ─────────────────
                   Text(
                     'GLOBAL CONNECTIVITY',
                     style: GoogleFonts.inter(
@@ -117,20 +137,24 @@ class DeviceConnectionScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color:        AppColors.softLilac,
                       borderRadius: BorderRadius.circular(20),
-                      border:       Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                      border:       Border.all(color: Colors.white.withOpacity(0.5)),
                     ),
                     child: Column(
                       children: [
-                        _ToggleRow(
+                        _SystemToggleRow(
                           icon:    Icons.bluetooth,
                           label:   'Bluetooth',
-                          toggled: deviceStatus.isAnyConnected,
+                          status:  isBluetoothOn ? 'Enabled' : 'Disabled',
+                          toggled: isBluetoothOn,
+                          onToggle: (v) => ref.read(systemServiceProvider).turnOnBluetooth(),
                           divider: true,
                         ),
-                        _ToggleRow(
+                        _SystemToggleRow(
                           icon:    Icons.wifi,
-                          label:   'WiFi Discovery',
-                          toggled: false,
+                          label:   'WiFi',
+                          status:  networkName,
+                          toggled: networkName != 'Disconnected' && networkName != 'Checking...',
+                          onToggle: (v) => ref.read(systemServiceProvider).openWiFiSettings(),
                         ),
                       ],
                     ),
@@ -138,26 +162,11 @@ class DeviceConnectionScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            // Pair button at bottom
+
+            // ── Pair / Scan Button ────────────────────────────────────────
             Positioned(
               left: 24, right: 24, bottom: 100,
-              child: Column(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                    icon:  const Icon(Icons.add_circle_outline),
-                    label: const Text('Pair New Device'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(54),
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: _PairButton(isEnabled: isBluetoothOn),
             ),
           ],
         ),
@@ -174,15 +183,83 @@ class DeviceConnectionScreen extends ConsumerWidget {
   }
 }
 
-// ─── Device Card ─────────────────────────────────────────────────────────────
-class _DeviceCard extends StatelessWidget {
+// ─── System Toggle Row ────────────────────────────────────────────────────────
+class _SystemToggleRow extends StatelessWidget {
   final IconData icon;
-  final String type;
-  final String name;
+  final String   label;
+  final String   status;
+  final bool     toggled;
+  final Function(bool) onToggle;
+  final bool     divider;
+
+  const _SystemToggleRow({
+    required this.icon,
+    required this.label,
+    required this.status,
+    required this.toggled,
+    required this.onToggle,
+    this.divider = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: Icon(icon, color: AppColors.deepLavender, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontSize: 15, fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1C1C1E),
+                      ),
+                    ),
+                    Text(
+                      status,
+                      style: GoogleFonts.inter(
+                        fontSize: 11, color: toggled ? AppColors.statusGreen : Colors.grey,
+                        fontWeight: toggled ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value:     toggled,
+                onChanged: onToggle,
+                activeThumbColor: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+        if (divider)
+          Divider(height: 1, color: Colors.white.withOpacity(0.5)),
+      ],
+    );
+  }
+}
+
+// ─── Device Card (Watch) ──────────────────────────────────────────────────────
+class _DeviceCard extends StatelessWidget {
+  final IconData         icon;
+  final String           type;
+  final String           name;
   final ConnectionStatus status;
-  final int battery;
-  final int signal;
-  final VoidCallback onReconnect;
+  final int              battery;
+  final int              signal;
+  final VoidCallback     onReconnect;
 
   const _DeviceCard({
     required this.icon,
@@ -196,17 +273,19 @@ class _DeviceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isConnected = status == ConnectionStatus.connected;
+    final isConnected  = status == ConnectionStatus.connected;
+    final isScanning   = status == ConnectionStatus.scanning;
+    final isConnecting = status == ConnectionStatus.connecting;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color:        AppColors.softLilac,
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: Colors.white.withValues(alpha: 0.5)),
+        border:       Border.all(color: Colors.white.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
-            color:      Colors.black.withValues(alpha: 0.04),
+            color:      Colors.black.withOpacity(0.04),
             blurRadius: 20, offset: const Offset(0, 4),
           ),
         ],
@@ -222,7 +301,7 @@ class _DeviceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: Colors.black.withOpacity(0.06),
                       blurRadius: 8,
                     ),
                   ],
@@ -255,7 +334,20 @@ class _DeviceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          if (isConnected) ...[
+
+          if (isScanning)
+            _StateRow(
+              icon: Icons.bluetooth_searching,
+              message: 'Scanning for devices…',
+              showSpinner: true,
+            )
+          else if (isConnecting)
+            _StateRow(
+              icon: Icons.bluetooth_connected,
+              message: 'Connecting…',
+              showSpinner: true,
+            )
+          else if (isConnected) ...[
             Row(
               children: [
                 Expanded(
@@ -270,7 +362,9 @@ class _DeviceCard extends StatelessWidget {
                   child: _InfoChip(
                     icon:  Icons.battery_full,
                     label: 'Battery',
-                    value: BatteryIndicator(percent: battery),
+                    value: battery > 0
+                        ? BatteryIndicator(percent: battery)
+                        : _BatteryUnknown(),
                   ),
                 ),
               ],
@@ -279,17 +373,16 @@ class _DeviceCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color:        Colors.white.withValues(alpha: 0.5),
+                color:        Colors.white.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(14),
                 border:       Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.4),
-                  style: BorderStyle.solid,
+                  color: AppColors.primary.withOpacity(0.4),
                 ),
               ),
               child: Column(
                 children: [
                   Text(
-                    'Communication link lost. Ensure the unit is powered on.',
+                    'Not Connected\nTap "Pair New Device" to search.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 12, color: Colors.grey[600],
@@ -299,7 +392,7 @@ class _DeviceCard extends StatelessWidget {
                   ElevatedButton.icon(
                     onPressed: onReconnect,
                     icon:  const Icon(Icons.refresh, size: 18),
-                    label: const Text('Reconnect Unit'),
+                    label: const Text('Reconnect'),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size.fromHeight(44),
                       backgroundColor: AppColors.primary,
@@ -317,98 +410,336 @@ class _DeviceCard extends StatelessWidget {
   }
 }
 
-// ─── Info chip ────────────────────────────────────────────────────────────────
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String   label;
-  final Widget   value;
+// ─── SIM Module Card ────────────────────────────────────────────────────────
+class _SimModuleCard extends StatelessWidget {
+  final ConnectionStatus status;
+  final String           name;
+  final int              battery;
+  final int              signal;
+  final String           networkType;
+  final int              simSignal;
+  final VoidCallback     onReconnect;
 
-  const _InfoChip({required this.icon, required this.label, required this.value});
+  const _SimModuleCard({
+    required this.status,
+    required this.name,
+    required this.battery,
+    required this.signal,
+    required this.networkType,
+    required this.simSignal,
+    required this.onReconnect,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isConnected  = status == ConnectionStatus.connected;
+    final isScanning   = status == ConnectionStatus.scanning;
+    final isConnecting = status == ConnectionStatus.connecting;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color:        Colors.white.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
-        border:       Border.all(color: Colors.white),
+        color:        Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border:       Border.all(color: AppColors.primary.withOpacity(0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 14, offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 9, fontWeight: FontWeight.w700,
-              color: Colors.grey[500], letterSpacing: 1,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(Icons.sim_card, color: AppColors.primary, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('SIM MODULE',
+                      style: GoogleFonts.inter(
+                        fontSize: 9, fontWeight: FontWeight.w700,
+                        color: Colors.grey[500], letterSpacing: 1.2,
+                      )),
+                    Text(name,
+                      style: GoogleFonts.inter(
+                        fontSize: 15, fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C1C1E),
+                      )),
+                  ],
+                ),
+              ),
+              ConnectionStatusBadge(status: status),
+            ],
           ),
-          const SizedBox(height: 4),
-          value,
+          const SizedBox(height: 14),
+
+          if (isScanning || isConnecting)
+            _StateRow(
+              icon: Icons.signal_cellular_alt,
+              message: isScanning ? 'Searching for SIM module…' : 'Connecting to SIM…',
+              showSpinner: true,
+            )
+          else if (isConnected) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _InfoChip(
+                    icon:  Icons.network_cell,
+                    label: 'Network',
+                    value: Text(networkType,
+                      style: GoogleFonts.inter(
+                        fontSize: 14, fontWeight: FontWeight.w700,
+                        color: AppColors.lavenderText,
+                      )),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _InfoChip(
+                    icon:  Icons.battery_full,
+                    label: 'Battery',
+                    value: battery > 0
+                        ? BatteryIndicator(percent: battery)
+                        : _BatteryUnknown(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _InfoChip(
+              icon:  Icons.signal_cellular_alt,
+              label: 'Signal',
+              value: SignalBar(level: simSignal),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color:        AppColors.softLilac.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'SIM module not connected.\nEnsure it is powered on and nearby.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: onReconnect,
+                    icon:  const Icon(Icons.refresh, size: 18),
+                    label: const Text('Reconnect'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(44),
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-// ─── Toggle row ──────────────────────────────────────────────────────────────
-class _ToggleRow extends StatefulWidget {
-  final IconData icon;
-  final String   label;
-  final bool     toggled;
-  final bool     divider;
-
-  const _ToggleRow({
-    required this.icon,
-    required this.label,
-    required this.toggled,
-    this.divider = false,
-  });
+// ─── Pair Button ─────────────────────────────────────────────────────────────
+class _PairButton extends ConsumerWidget {
+  final bool isEnabled;
+  const _PairButton({required this.isEnabled});
 
   @override
-  State<_ToggleRow> createState() => _ToggleRowState();
-}
-
-class _ToggleRowState extends State<_ToggleRow> {
-  late bool _on;
-
-  @override void initState() { super.initState(); _on = widget.toggled; }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 40, height: 40,
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: Icon(widget.icon, color: AppColors.deepLavender, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  widget.label,
-                  style: GoogleFonts.inter(
-                    fontSize: 15, fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1C1C1E),
-                  ),
+        if (!isEnabled)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: AppColors.alertOrange, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  'Enable Bluetooth to scan',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.alertOrange, fontWeight: FontWeight.w600),
                 ),
-              ),
-              Switch(
-                value:     _on,
-                onChanged: (v) => setState(() => _on = v),
-                activeThumbColor: AppColors.primary,
-              ),
-            ],
+              ],
+            ),
+          ),
+        ElevatedButton.icon(
+          onPressed: isEnabled ? () => _openScanSheet(context, ref) : null,
+          icon:  const Icon(Icons.add_circle_outline),
+          label: const Text('Pair New Device'),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size.fromHeight(54),
+            backgroundColor: isEnabled ? AppColors.primary : Colors.grey[300],
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
-        if (widget.divider)
-          Divider(height: 1, color: Colors.white.withValues(alpha: 0.5)),
       ],
+    );
+  }
+
+  void _openScanSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ScanSheet(
+        onDeviceSelected: (device) async {
+          Navigator.pop(context);
+          await ref.read(bleServiceProvider).connectToDevice(device);
+        },
+      ),
+    );
+    ref.read(bleServiceProvider).startManualScan();
+  }
+}
+
+// ─── Scan Sheet ───────────────────────────────────────────────────────────────
+class _ScanSheet extends ConsumerWidget {
+  final Future<void> Function(BluetoothDevice) onDeviceSelected;
+  const _ScanSheet({required this.onDeviceSelected});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scanResultsAsync = ref.watch(bleScanResultsProvider);
+    final scanningAsync    = ref.watch(bleScanningProvider);
+    final isScanning       = scanningAsync.value ?? true;
+    final results          = scanResultsAsync.value ?? [];
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(2))),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Text('Available Devices', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF1C1C1E))),
+              const Spacer(),
+              if (isScanning)
+                Row(
+                  children: [
+                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                    const SizedBox(width: 8),
+                    Text('Scanning…', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary)),
+                  ],
+                )
+              else
+                TextButton.icon(
+                  onPressed: () => ref.read(bleServiceProvider).startManualScan(),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Rescan'),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: results.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.bluetooth_searching, size: 48, color: Colors.grey[300]),
+                        const SizedBox(height: 12),
+                        Text(isScanning ? 'Searching...' : 'No devices found', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[400])),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: results.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, i) {
+                      final r = results[i];
+                      return ListTile(
+                        leading: CircleAvatar(backgroundColor: AppColors.softLilac, child: const Icon(Icons.bluetooth, color: AppColors.primary, size: 20)),
+                        title: Text(r.device.platformName.isNotEmpty ? r.device.platformName : 'Unknown', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                        subtitle: Text('${r.device.remoteId.str} · ${r.rssi} dBm', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                        trailing: ElevatedButton(
+                          onPressed: () => onDeviceSelected(r.device),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: const StadiumBorder(), minimumSize: const Size(0, 36)),
+                          child: const Text('Connect'),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Shared UI Helpers ───────────────────────────────────────────────────────
+class _StateRow extends StatelessWidget {
+  final IconData icon;
+  final String   message;
+  final bool     showSpinner;
+  const _StateRow({required this.icon, required this.message, this.showSpinner = false});
+  @override Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.6), borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          if (showSpinner) SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+          else Icon(icon, color: AppColors.primary, size: 18),
+          const SizedBox(width: 10),
+          Text(message, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700])),
+        ],
+      ),
+    );
+  }
+}
+
+class _BatteryUnknown extends StatelessWidget {
+  @override Widget build(BuildContext context) => Text('—', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.grey[400]));
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final Widget   value;
+  const _InfoChip({required this.icon, required this.label, required this.value});
+  @override Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.6), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(), style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.grey[500], letterSpacing: 1)),
+          const SizedBox(height: 4),
+          value,
+        ],
+      ),
     );
   }
 }

@@ -4,12 +4,13 @@
 class AppConstants {
   // ─── BLE UUIDs ──────────────────────────────────────────────────────────────
   // Update these to match your actual ESP32-C3 firmware UUIDs
-  static const String bleServiceUUID       = '12345678-1234-5678-1234-56789abcdef0';
+  static const String bleServiceUUID        = '12345678-1234-5678-1234-56789abcdef0';
   static const String bleCharacteristicUUID = '12345678-1234-5678-1234-56789abcdef1';
 
-  // Devices detected by name prefix
+  // Device name filters
   static const String watchNamePrefix   = 'SafeNest-Watch';
   static const String simUnitNamePrefix = 'SafeNest-SIM';
+  static const String safeNestPrefix    = 'SafeNest'; // generic prefix for scan filter
 
   // ─── Health thresholds ──────────────────────────────────────────────────────
   static const int    heartRateMax      = 120;
@@ -31,18 +32,16 @@ class AppConstants {
   static const int notifIdSimError    = 1005;
 
   // ─── Hive box names ─────────────────────────────────────────────────────────
-  static const String hiveBoxSettings     = 'settings';
-  static const String hiveBoxHealthCache  = 'health_cache';
+  static const String hiveBoxSettings    = 'settings';
+  static const String hiveBoxHealthCache = 'health_cache';
 
   // ─── Hive keys ──────────────────────────────────────────────────────────────
   static const String keyPairedWatchId    = 'paired_watch_id';
   static const String keyPairedSimId      = 'paired_sim_id';
   static const String keyPregnancyWeek    = 'pregnancy_week';
+  static const String keyPregnancyStartDate = 'pregnancy_start_date';
   static const String keyUserName         = 'user_name';
   static const String keyLastHealthPacket = 'last_health_packet';
   static const String keyLastGpsLat       = 'last_gps_lat';
   static const String keyLastGpsLng       = 'last_gps_lng';
-
-  // ─── Demo/Mock mode ─────────────────────────────────────────────────────────
-  static const bool useMockData = true; // Set false when hardware is available
 }

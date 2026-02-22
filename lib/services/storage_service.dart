@@ -24,10 +24,17 @@ class StorageService {
       _settings.put(AppConstants.keyPairedSimId, id);
 
   // ─── Pregnancy ───────────────────────────────────────────────────────────────
-  static int get pregnancyWeek =>
-      (_settings.get(AppConstants.keyPregnancyWeek) as int?) ?? 22;
+  static int? get pregnancyWeek =>
+      _settings.get(AppConstants.keyPregnancyWeek) as int?;
   static Future<void> setPregnancyWeek(int week) =>
       _settings.put(AppConstants.keyPregnancyWeek, week);
+
+  static DateTime? get pregnancyStartDate {
+    final s = _settings.get(AppConstants.keyPregnancyStartDate) as String?;
+    return s != null ? DateTime.tryParse(s) : null;
+  }
+  static Future<void> setPregnancyStartDate(DateTime date) =>
+      _settings.put(AppConstants.keyPregnancyStartDate, date.toIso8601String());
 
   // ─── User name ─────────────────────────────────────────────────────────────
   static String get userName =>

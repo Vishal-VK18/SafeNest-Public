@@ -25,8 +25,8 @@ class VitalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = isAlert ? AppColors.dangerRed : AppColors.statusGreen;
     final statusBg    = isAlert
-        ? AppColors.dangerRed.withValues(alpha: 0.1)
-        : AppColors.statusGreen.withValues(alpha: 0.1);
+        ? AppColors.dangerRed.withOpacity(0.1)
+        : AppColors.statusGreen.withOpacity(0.1);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -35,7 +35,7 @@ class VitalCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isAlert
-              ? AppColors.dangerRed.withValues(alpha: 0.3)
+              ? AppColors.dangerRed.withOpacity(0.3)
               : Colors.transparent,
           width: 1.5,
         ),
@@ -45,7 +45,7 @@ class VitalCard extends StatelessWidget {
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
-              color:  AppColors.primary.withValues(alpha: 0.2),
+              color:  AppColors.primary.withOpacity(0.2),
               shape:  BoxShape.circle,
             ),
             child: Icon(icon, color: AppColors.primary, size: 24),
@@ -98,7 +98,7 @@ class VitalCard extends StatelessWidget {
             decoration: BoxDecoration(
               color:        statusBg,
               borderRadius: BorderRadius.circular(20),
-              border:       Border.all(color: statusColor.withValues(alpha: 0.3)),
+              border:       Border.all(color: statusColor.withOpacity(0.3)),
             ),
             child: Text(
               statusLabel.toUpperCase(),

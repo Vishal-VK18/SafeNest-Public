@@ -10,7 +10,7 @@ class HealthDataModel {
   final int watchBattery;
   final int simBattery;
   final int simSignal;       // 0–4
-  final String networkType;  // "2G" | "3G" | "4G" | "LTE-M"
+  final String networkType;  // "2G" | "3G" | "4G" | "LTE-M" | "N/A"
   final double gpsLat;
   final double gpsLng;
   final DateTime? lastSmsTime;
@@ -82,38 +82,25 @@ class HealthDataModel {
 
   String toJsonString() => jsonEncode(toJson());
 
-  // ─── Default / empty ────────────────────────────────────────────────────────
+  // ─── Empty state — all zeroes, no fake values ────────────────────────────────
   factory HealthDataModel.empty() => HealthDataModel(
     heartRate:     0,
     temperature:   0.0,
     fallDetected:  false,
-    pregnancyWeek: 22,
-    watchBattery:  100,
-    simBattery:    100,
-    simSignal:     4,
-    networkType:   '4G',
+    pregnancyWeek: 0,
+    watchBattery:  0,
+    simBattery:    0,
+    simSignal:     0,
+    networkType:   'N/A',
     gpsLat:        0.0,
     gpsLng:        0.0,
     receivedAt:    DateTime.now(),
   );
 
-  // ─── Demo / mock ────────────────────────────────────────────────────────────
-  factory HealthDataModel.mock() => HealthDataModel(
-    heartRate:     82,
-    temperature:   36.7,
-    fallDetected:  false,
-    pregnancyWeek: 22,
-    watchBattery:  85,
-    simBattery:    72,
-    simSignal:     4,
-    networkType:   '4G',
-    gpsLat:        12.9716,
-    gpsLng:        77.5946,
-    lastSmsTime:   DateTime(2026, 2, 22, 18, 30),
-    receivedAt:    DateTime.now(),
-  );
-
   // ─── Status helpers ──────────────────────────────────────────────────────────
+  /// True only when real data received (non-zero)
+  bool get hasData => heartRate > 0 || temperature > 0;
+
   bool get isHeartRateNormal =>
       heartRate >= AppConstants.heartRateMin &&
       heartRate <= AppConstants.heartRateMax;
@@ -122,8 +109,14 @@ class HealthDataModel {
       temperature < AppConstants.tempHighThreshold &&
       temperature >= AppConstants.tempLowThreshold;
 
-  String get heartRateStatus => isHeartRateNormal ? 'Normal' : 'Abnormal';
-  String get temperatureStatus => isTemperatureNormal ? 'Normal' : 'High';
+  String get heartRateStatus => heartRate == 0
+      ? 'Waiting for data'
+      : (isHeartRateNormal ? 'Normal' : 'Abnormal');
+
+  String get temperatureStatus => temperature == 0.0
+      ? 'Waiting for data'
+      : (isTemperatureNormal ? 'Normal' : 'High');
+
   String get fallStatus => fallDetected ? 'FALL DETECTED' : 'No Issues';
 
   String get gpsString =>

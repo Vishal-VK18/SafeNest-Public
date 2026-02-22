@@ -2,6 +2,7 @@
 // Single file exposing all Riverpod providers for SafeNest.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_data_model.dart';
 import '../models/device_status_model.dart';
 import '../models/pregnancy_model.dart';
@@ -12,31 +13,27 @@ import '../services/storage_service.dart';
 final bleServiceProvider = Provider<BleService>((_) => BleService.instance);
 
 // ─── Health data stream ──────────────────────────────────────────────────────
-/// Streams the latest parsed BLE health packet. Falls back to cached data.
+/// Streams the latest parsed BLE health packet.
 final healthStreamProvider = StreamProvider<HealthDataModel>((ref) {
   final ble = ref.read(bleServiceProvider);
   return ble.healthStream;
 });
 
-/// Latest health snapshot (non-async, with fallback from storage)
+/// Latest health snapshot — starts empty, updated only by real BLE data.
 final healthDataProvider = StateNotifierProvider<HealthDataNotifier, HealthDataModel>(
   (ref) => HealthDataNotifier(ref),
 );
 
 class HealthDataNotifier extends StateNotifier<HealthDataModel> {
   final Ref _ref;
-  HealthDataNotifier(this._ref) : super(_loadCached()) {
-    // Subscribe to BLE stream
+  HealthDataNotifier(this._ref) : super(HealthDataModel.empty()) {
+    // Subscribe to real BLE stream only
     _ref.read(bleServiceProvider).healthStream.listen((packet) {
       state = packet;
     });
   }
 
-  static HealthDataModel _loadCached() {
-    final json = StorageService.lastHealthPacket;
-    if (json != null) return HealthDataModel.fromJsonString(json);
-    return HealthDataModel.mock();
-  }
+  void reset() => state = HealthDataModel.empty();
 }
 
 // ─── Device status stream ────────────────────────────────────────────────────
@@ -63,6 +60,17 @@ class DeviceStatusNotifier extends StateNotifier<DeviceStatusModel> {
   }
 }
 
+// ─── BLE Scan state ──────────────────────────────────────────────────────────
+/// True while a manual scan is in progress.
+final bleScanningProvider = StreamProvider<bool>((ref) {
+  return ref.read(bleServiceProvider).scanningStream;
+});
+
+/// Live list of discovered BLE devices during manual scan.
+final bleScanResultsProvider = StreamProvider<List<ScanResult>>((ref) {
+  return ref.read(bleServiceProvider).scanResultsStream;
+});
+
 // ─── Pregnancy ───────────────────────────────────────────────────────────────
 final pregnancyProvider =
     StateNotifierProvider<PregnancyNotifier, PregnancyModel>(
@@ -72,13 +80,19 @@ final pregnancyProvider =
 class PregnancyNotifier extends StateNotifier<PregnancyModel> {
   PregnancyNotifier()
       : super(PregnancyModel(
-          pregnancyWeek: StorageService.pregnancyWeek,
-          userName:      StorageService.userName,
+          startDate:  StorageService.pregnancyStartDate,
+          manualWeek: StorageService.pregnancyWeek,
+          userName:   StorageService.userName,
         ));
+
+  Future<void> updateStartDate(DateTime date) async {
+    await StorageService.setPregnancyStartDate(date);
+    state = state.copyWith(startDate: date);
+  }
 
   Future<void> updateWeek(int week) async {
     await StorageService.setPregnancyWeek(week);
-    state = state.copyWith(pregnancyWeek: week);
+    state = state.copyWith(manualWeek: week);
   }
 
   Future<void> updateName(String name) async {
@@ -89,7 +103,6 @@ class PregnancyNotifier extends StateNotifier<PregnancyModel> {
 
 // ─── Fall alert state (for UI dismissal) ────────────────────────────────────
 final fallAlertActiveProvider = StateProvider<bool>((ref) {
-  // Automatically becomes true when health data shows fall_detected
   final health = ref.watch(healthDataProvider);
   return health.fallDetected;
 });
