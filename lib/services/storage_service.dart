@@ -59,16 +59,67 @@ class StorageService {
   static Future<void> setLastHealthPacket(String json) =>
       _healthCache.put(AppConstants.keyLastHealthPacket, json);
 
-  // ─── Safety History ────────────────────────────────────────────────────────
-  static List<String> get safetyHistory =>
-      List<String>.from(_healthCache.get(AppConstants.keySafetyHistory, defaultValue: []) as List);
+  // ─── Intelligent Models Data ─────────────────────────────────────────────────
+  static String? get hydrationData =>
+      _settings.get(AppConstants.keyHydrationData) as String?;
+  static Future<void> setHydrationData(String json) =>
+      _settings.put(AppConstants.keyHydrationData, json);
 
-  static Future<void> addSafetyEvent(String eventJson) async {
-    final history = safetyHistory;
-    history.insert(0, eventJson); // Newest first
-    if (history.length > 50) history.removeLast(); // Keep top 50
-    await _healthCache.put(AppConstants.keySafetyHistory, history);
-  }
+  static String? get sleepData =>
+      _settings.get(AppConstants.keySleepData) as String?;
+  static Future<void> setSleepData(String json) =>
+      _settings.put(AppConstants.keySleepData, json);
+
+  static String? get appointments =>
+      _settings.get(AppConstants.keyAppointments) as String?;
+  static Future<void> setAppointments(String json) =>
+      _settings.put(AppConstants.keyAppointments, json);
+
+  // ─── Auth / User Profile ─────────────────────────────────────────────────
+  static bool get isLoggedIn =>
+      (_settings.get(AppConstants.keyIsLoggedIn) as bool?) ?? false;
+  static Future<void> setIsLoggedIn(bool v) =>
+      _settings.put(AppConstants.keyIsLoggedIn, v);
+
+  static String? get userEmail =>
+      _settings.get(AppConstants.keyUserEmail) as String?;
+  static Future<void> setUserEmail(String email) =>
+      _settings.put(AppConstants.keyUserEmail, email);
+
+  static String? get userPhone =>
+      _settings.get(AppConstants.keyUserPhone) as String?;
+  static Future<void> setUserPhone(String phone) =>
+      _settings.put(AppConstants.keyUserPhone, phone);
+
+  static String? get bloodGroup =>
+      _settings.get(AppConstants.keyBloodGroup) as String?;
+  static Future<void> setBloodGroup(String bg) =>
+      _settings.put(AppConstants.keyBloodGroup, bg);
+
+  static int? get userAge =>
+      _settings.get(AppConstants.keyUserAge) as int?;
+  static Future<void> setUserAge(int age) =>
+      _settings.put(AppConstants.keyUserAge, age);
+
+  static String? get emergencyContact =>
+      _settings.get(AppConstants.keyEmergencyContact) as String?;
+  static Future<void> setEmergencyContact(String contact) =>
+      _settings.put(AppConstants.keyEmergencyContact, contact);
+
+  static String? get passwordHash =>
+      _settings.get(AppConstants.keyPasswordHash) as String?;
+  static Future<void> setPasswordHash(String hash) =>
+      _settings.put(AppConstants.keyPasswordHash, hash);
+
+  static String? get profilePhotoPath =>
+      _settings.get(AppConstants.keyProfilePhotoPath) as String?;
+  static Future<void> setProfilePhotoPath(String path) =>
+      _settings.put(AppConstants.keyProfilePhotoPath, path);
+
+  static bool get biometricEnabled =>
+      (_settings.get(AppConstants.keyBiometricEnabled) as bool?) ?? false;
+  static Future<void> setBiometricEnabled(bool val) =>
+      _settings.put(AppConstants.keyBiometricEnabled, val);
 
   // ─── Clear all ─────────────────────────────────────────────────────────────
   static Future<void> clearAll() async {
@@ -76,3 +127,4 @@ class StorageService {
     await _healthCache.clear();
   }
 }
+

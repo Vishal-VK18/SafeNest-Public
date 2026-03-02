@@ -45,4 +45,18 @@ class AppConstants {
   static const String keyLastHealthPacket = 'last_health_packet';
   static const String keyLastGpsLat       = 'last_gps_lat';
   static const String keyLastGpsLng       = 'last_gps_lng';
+  static const String keyHydrationData    = 'hydration_data';
+  static const String keySleepData        = 'sleep_data';
+  static const String keyAppointments     = 'appointments';
+
+  // Auth / profile
+  static const String keyUserEmail        = 'user_email';
+  static const String keyUserPhone        = 'user_phone';
+  static const String keyIsLoggedIn       = 'is_logged_in';
+  static const String keyBloodGroup       = 'blood_group';
+  static const String keyUserAge          = 'user_age';
+  static const String keyEmergencyContact = 'emergency_contact';
+  static const String keyPasswordHash     = 'password_hash';
+  static const String keyProfilePhotoPath = 'profile_photo_path';
+  static const String keyBiometricEnabled = 'biometric_enabled';
 }

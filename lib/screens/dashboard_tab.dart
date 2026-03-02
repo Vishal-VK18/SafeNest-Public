@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../models/device_status_model.dart';
 import '../utils/app_theme.dart';
+import '../core/constants/route_constants.dart';
+import '../widgets/interactive_card_wrapper.dart';
 
 class DashboardTab extends ConsumerWidget {
   const DashboardTab({super.key});
@@ -47,11 +49,13 @@ class DashboardTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              Row(
-                children: [
-                   IconButton(
-                    onPressed: () => Navigator.pushNamed(context, '/history'),
-                    icon: const Icon(Icons.more_horiz, color: Colors.grey),
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, RouteConstants.profile),
+                child: Container(
+                  width: 50, height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
@@ -88,31 +92,40 @@ class DashboardTab extends ConsumerWidget {
           const SizedBox(height: 40),
 
           // ── Vitals Section ───────────────────────────────────────────────
-          _buildVitalCard(
-            icon: Icons.favorite,
-            label: 'Heart Rate',
-            value: isConnected && hasData ? '${health.heartRate}' : '--',
-            unit: 'BPM',
-            status: isConnected && hasData ? (health.isHeartRateNormal ? 'Normal' : 'Alert') : 'Waiting',
-            isNormal: health.isHeartRateNormal || !hasData,
+          InteractiveCardWrapper(
+            onTap: () => Navigator.pushNamed(context, RouteConstants.heartRate),
+            child: _buildVitalCard(
+              icon: Icons.favorite,
+              label: 'Heart Rate',
+              value: isConnected && hasData ? '${health.heartRate}' : '--',
+              unit: 'BPM',
+              status: isConnected && hasData ? (health.isHeartRateNormal ? 'Normal' : 'Alert') : 'Waiting',
+              isNormal: health.isHeartRateNormal || !hasData,
+            ),
           ),
           const SizedBox(height: 16),
-          _buildVitalCard(
-            icon: Icons.thermostat,
-            label: 'Body Temp',
-            value: isConnected && hasData ? health.temperature.toStringAsFixed(1) : '--',
-            unit: '°C',
-            status: isConnected && hasData ? (health.isTemperatureNormal ? 'Normal' : 'Alert') : 'Waiting',
-            isNormal: health.isTemperatureNormal || !hasData,
+          InteractiveCardWrapper(
+            onTap: () => Navigator.pushNamed(context, RouteConstants.temperature),
+            child: _buildVitalCard(
+              icon: Icons.thermostat,
+              label: 'Body Temp',
+              value: isConnected && hasData ? health.temperature.toStringAsFixed(1) : '--',
+              unit: '°C',
+              status: isConnected && hasData ? (health.isTemperatureNormal ? 'Normal' : 'Alert') : 'Waiting',
+              isNormal: health.isTemperatureNormal || !hasData,
+            ),
           ),
           const SizedBox(height: 16),
-          _buildVitalCard(
-            icon: Icons.shield,
-            label: 'Fall Status',
-            value: health.fallDetected ? 'Fall Detected' : 'No Issues',
-            unit: '',
-            status: health.fallDetected ? 'Alert' : 'Normal',
-            isNormal: !health.fallDetected,
+          InteractiveCardWrapper(
+            onTap: () => Navigator.pushNamed(context, RouteConstants.fallEventLog),
+            child: _buildVitalCard(
+              icon: Icons.shield,
+              label: 'Fall Status',
+              value: health.fallDetected ? 'Fall Detected' : 'No Issues',
+              unit: '',
+              status: health.fallDetected ? 'Alert' : 'Normal',
+              isNormal: !health.fallDetected,
+            ),
           ),
 
           const SizedBox(height: 40),
@@ -132,7 +145,7 @@ class DashboardTab extends ConsumerWidget {
           
           // ── Emergency Button ──────────────────────────────────────────────
           ElevatedButton.icon(
-            onPressed: () => ref.read(manualSOSProvider.notifier).state = true,
+            onPressed: () => Navigator.pushNamed(context, RouteConstants.alerts),
             icon: const Icon(Icons.contact_support),
             label: const Text('Contact Care Provider'),
             style: ElevatedButton.styleFrom(

@@ -4,7 +4,10 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_data_model.dart';
 import '../models/device_status_model.dart';
 import '../models/pregnancy_model.dart';
-import '../models/safety_event_model.dart';
+import '../models/contact_model.dart';
+import '../models/hydration_model.dart';
+import '../models/sleep_oxygen_model.dart';
+import '../models/appointment_model.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
@@ -107,56 +110,320 @@ final fallAlertActiveProvider = StateProvider<bool>((ref) {
   return health.fallDetected;
 });
 
-// ─── Safety Event History ───────────────────────────────────────────────────
+// ─── Caregivers ───────────────────────────────────────────────────────────────
+final contactsProvider = StateNotifierProvider<ContactsNotifier, List<ContactModel>>((ref) {
+  return ContactsNotifier();
+});
 
-class SafetyHistoryNotifier extends StateNotifier<List<SafetyEventModel>> {
-  SafetyHistoryNotifier() : super([]) {
-    _load();
+class ContactsNotifier extends StateNotifier<List<ContactModel>> {
+  ContactsNotifier() : super([]);
+
+  void addContact(ContactModel contact) {
+    state = [...state, contact];
   }
 
-  void _load() {
-    try {
-      final historyJson = StorageService.safetyHistory;
-      state = historyJson.map((s) => SafetyEventModel.fromJson(jsonDecode(s) as Map<String, dynamic>)).toList();
-    } catch (_) {
-      state = [];
-    }
+  void updateContactTokens(String id, bool notificationsEnabled) {
+    state = [
+      for (final contact in state)
+        if (contact.id == id)
+          contact.copyWith(notificationsEnabled: notificationsEnabled)
+        else
+          contact
+    ];
   }
 
-  Future<void> addEvent({
-    required SafetyEventType type,
-    required String description,
-    String? location,
-    SafetyEventStatus status = SafetyEventStatus.info,
-  }) async {
-    final event = SafetyEventModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: type,
-      timestamp: DateTime.now(),
-      description: description,
-      location: location,
-      status: status,
-    );
-
-    state = [event, ...state];
-    await StorageService.addSafetyEvent(jsonEncode(event.toJson()));
+  void updateContactDetails(String id, String name, String phone, String relationship) {
+    state = [
+      for (final contact in state)
+        if (contact.id == id)
+          contact.copyWith(
+            name: name,
+            phoneNumber: phone,
+            relationship: relationship,
+          )
+        else
+          contact
+    ];
   }
 
-  Future<void> recordFromHealth(HealthDataModel health, SafetyEventType type) async {
-    await addEvent(
-      type: type,
-      description: type == SafetyEventType.fall 
-          ? "Fall detected near your location." 
-          : "Emergency SOS triggered manually.",
-      location: health.gpsLat != 0 ? "${health.gpsLat.toStringAsFixed(4)}, ${health.gpsLng.toStringAsFixed(4)}" : "Unknown Location",
-      status: SafetyEventStatus.resolved, // UI shows Resolved as default for past events
-    );
+  void removeContact(String id) {
+    state = state.where((c) => c.id != id).toList();
   }
 }
 
-final safetyHistoryProvider = StateNotifierProvider<SafetyHistoryNotifier, List<SafetyEventModel>>((ref) {
-  return SafetyHistoryNotifier();
+// ─── Hydration Logic Engine ──────────────────────────────────────────────────
+final hydrationProvider = StateNotifierProvider<HydrationNotifier, HydrationModel>((ref) {
+  return HydrationNotifier();
 });
 
-// Used to trigger SOS manually from UI
-final manualSOSProvider = StateProvider<bool>((ref) => false);
+class HydrationNotifier extends StateNotifier<HydrationModel> {
+  HydrationNotifier()
+      : super(StorageService.hydrationData != null
+            ? HydrationModel.fromJsonString(StorageService.hydrationData!)
+            : HydrationModel.empty()) {
+    _checkMidnightReset();
+  }
+
+  // ── Midnight reset ────────────────────────────────────────────────────────
+  void _checkMidnightReset() {
+    final now  = DateTime.now();
+    final last = state.lastUpdated;
+    if (now.year != last.year || now.month != last.month || now.day != last.day) {
+      final dateKey = '${last.year}-${last.month.toString().padLeft(2, '0')}-${last.day.toString().padLeft(2, '0')}';
+      final newHistory = Map<String, double>.from(state.history);
+      newHistory[dateKey] = state.intakeLiters;
+      final streak = state.intakeLiters >= 2.0 ? state.streakDays + 1 : 0;
+      state = state.copyWith(
+        intakeLiters: 0.0,
+        lastUpdated:  now,
+        history:      newHistory,
+        streakDays:   streak,
+        todayEntries: [],
+      );
+      _save();
+    }
+  }
+
+  // ── Add water (backward-compat shim) ─────────────────────────────────────
+  void addWater(double liters) => addEntry(liters);
+
+  // ── Add entry with timestamp for time-bucket grouping ────────────────────
+  void addEntry(double liters) {
+    _checkMidnightReset();
+    final entry  = HydrationEntry(timestamp: DateTime.now(), liters: liters);
+    final entries = [...state.todayEntries, entry];
+    final newIntake = (state.intakeLiters + liters).clamp(0.0, 8.0);
+    state = state.copyWith(
+      intakeLiters: newIntake,
+      lastUpdated:  DateTime.now(),
+      todayEntries: entries,
+    );
+    _save();
+  }
+
+  // ── Reminder state ────────────────────────────────────────────────────────
+  void setReminder({required bool enabled, int? freqHours}) {
+    state = state.copyWith(
+      reminderEnabled:   enabled,
+      reminderFreqHours: freqHours ?? state.reminderFreqHours,
+    );
+    _save();
+  }
+
+  // ── Persist ───────────────────────────────────────────────────────────────
+  void _save() {
+    StorageService.setHydrationData(state.toJsonString());
+  }
+}
+
+
+// ─── Sleep & Oxygen Logic Engine ──────────────────────────────────────────────
+final sleepOxygenProvider = StateNotifierProvider<SleepOxygenNotifier, SleepOxygenModel>((ref) {
+  return SleepOxygenNotifier();
+});
+
+class SleepOxygenNotifier extends StateNotifier<SleepOxygenModel> {
+  SleepOxygenNotifier() : super(StorageService.sleepData != null 
+    ? SleepOxygenModel.fromJsonString(StorageService.sleepData!)
+    : SleepOxygenModel.empty());
+
+  void updateData({
+    double? sleepDurationHours,
+    double? deepSleepPercentage,
+    int? interruptions,
+    double? currentSpO2,
+  }) {
+    List<double> newHistory = List.from(state.spO2History);
+    double newAvg = state.averageSpO2;
+
+    if (currentSpO2 != null) {
+      newHistory.add(currentSpO2);
+      if (newHistory.length > 20) newHistory.removeAt(0); // keep rolling window
+      newAvg = newHistory.reduce((a, b) => a + b) / newHistory.length;
+    }
+
+    state = state.copyWith(
+      sleepDurationHours: sleepDurationHours ?? state.sleepDurationHours,
+      deepSleepPercentage: deepSleepPercentage ?? state.deepSleepPercentage,
+      interruptions: interruptions ?? state.interruptions,
+      averageSpO2: newAvg,
+      spO2History: newHistory,
+      lastUpdated: DateTime.now(),
+    );
+    _save();
+  }
+
+  int calculateSleepScore() {
+    double score = 100.0;
+    if (state.sleepDurationHours < 7.0) score -= (7.0 - state.sleepDurationHours) * 10;
+    if (state.deepSleepPercentage < 20.0) score -= (20.0 - state.deepSleepPercentage) * 0.5;
+    score -= state.interruptions * 5;
+    return score.clamp(0, 100).toInt();
+  }
+
+  void _save() {
+    StorageService.setSleepData(state.toJsonString());
+  }
+}
+
+// ─── Smart Appointment System ────────────────────────────────────────────────
+final appointmentProvider = StateNotifierProvider<AppointmentNotifier, List<AppointmentModel>>((ref) {
+  return AppointmentNotifier();
+});
+
+class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
+  AppointmentNotifier() : super(StorageService.appointments != null 
+    ? AppointmentModel.decodeList(StorageService.appointments!)
+    : []);
+
+  void addAppointment(AppointmentModel appt) {
+    state = [...state, appt];
+    _save();
+  }
+
+  void updateAppointment(AppointmentModel updated) {
+    state = [
+      for (final a in state)
+        if (a.id == updated.id) updated else a
+    ];
+    _save();
+  }
+
+  void rescheduleAppointment(String id, DateTime newDate) {
+    state = [
+      for (final a in state)
+        if (a.id == id)
+          a.copyWith(date: newDate, isMissed: false, isCompleted: false)
+        else
+          a
+    ];
+    _save();
+  }
+
+  void markCompleted(String id) {
+    state = [
+      for (final a in state)
+        if (a.id == id) a.copyWith(isCompleted: true, isMissed: false) else a
+    ];
+    _save();
+  }
+
+  void deleteAppointment(String id) {
+    state = state.where((a) => a.id != id).toList();
+    _save();
+  }
+
+  void attachReport(String id, String filePath, String fileName) {
+    state = [
+      for (final a in state)
+        if (a.id == id)
+          a.copyWith(
+            reportFilePath: filePath,
+            reportFileName: fileName,
+            reportUploadDate: DateTime.now(),
+          )
+        else
+          a
+    ];
+    _save();
+  }
+
+  void removeReport(String id) {
+    state = [
+      for (final a in state)
+        if (a.id == id) a.copyWith(clearReport: true) else a
+    ];
+    _save();
+  }
+
+  void checkReminders() {
+    final now = DateTime.now();
+    bool changed = false;
+    final newState = state.map((appt) {
+      if (appt.isCompleted) return appt;
+      // Detect missed: appointment has passed and not marked completed
+      if (appt.date.isBefore(now)) {
+        changed = true;
+        return appt.copyWith(isMissed: true);
+      }
+      return appt;
+    }).toList();
+    
+    if (changed) {
+      state = newState;
+      _save();
+    }
+  }
+
+  void _save() {
+    StorageService.setAppointments(AppointmentModel.encodeList(state));
+  }
+}
+
+
+// ─── Risk Scoring System ─────────────────────────────────────────────────────
+final riskScoreProvider = Provider<int>((ref) {
+  int score = 0;
+  
+  // 1. Hydration Risk (Low intake by 4 PM OR absolute low)
+  final hyd = ref.watch(hydrationProvider);
+  final preg = ref.watch(pregnancyProvider);
+  final double goal = preg.pregnancyWeek <= 13 ? 2.5 : (preg.pregnancyWeek <= 26 ? 2.8 : 3.0);
+  
+  if (hyd.intakeLiters < (goal * 0.4) && DateTime.now().hour >= 16) {
+    score += 1;
+  } else if (hyd.intakeLiters < (goal * 0.8) && DateTime.now().hour >= 20) {
+    score += 1;
+  }
+
+  // 2. Poor Sleep
+  final sleep = ref.watch(sleepOxygenProvider);
+  if (sleep.sleepDurationHours > 0 && sleep.sleepDurationHours < 6.0) {
+    score += 1;
+  }
+
+  // 3. Oxygen Low
+  if (sleep.averageSpO2 > 0 && sleep.averageSpO2 < 95.0) {
+    score += 1;
+  }
+
+  // 4. Fall Detected or High Temp/HeartRate
+  final health = ref.watch(healthDataProvider);
+  if (health.fallDetected) {
+    score += 1;
+  }
+  if (health.hasData) {
+    if (!health.isHeartRateNormal) score += 1;
+    if (!health.isTemperatureNormal) score += 1;
+  }
+
+  return score;
+});
+
+final riskStatusProvider = Provider<String>((ref) {
+  final score = ref.watch(riskScoreProvider);
+  if (score >= 3) return "High Risk – Alert Caregiver";
+  if (score >= 2) return "Mild Risk – Monitor Closely";
+  return "On Track";
+});
+
+// ─── Weekly Health Analytics Engine ──────────────────────────────────────────
+final weeklyAnalyticsProvider = Provider<Map<String, dynamic>>((ref) {
+  final hyd = ref.watch(hydrationProvider);
+  final sleep = ref.watch(sleepOxygenProvider);
+  final risk = ref.watch(riskStatusProvider);
+  
+  double totalHyd = 0.0;
+  if (hyd.history.isNotEmpty) {
+    totalHyd = hyd.history.values.reduce((a, b) => a + b) / hyd.history.length;
+  }
+  
+  return {
+    'avgHydration': totalHyd.toStringAsFixed(1),
+    'avgSleepDuration': sleep.sleepDurationHours.toStringAsFixed(1),
+    'avgSpO2': sleep.averageSpO2.toStringAsFixed(1),
+    'riskSummary': risk,
+    // Using weekday == DateTime.sunday (7) to conditionally show weekly banner
+    'isSunday': DateTime.now().weekday == DateTime.sunday,
+  };
+});

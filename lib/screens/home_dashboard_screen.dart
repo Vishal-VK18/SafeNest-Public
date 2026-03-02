@@ -45,12 +45,12 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
           children: [
             IndexedStack(
               index: _selectedTab,
-              children: const [
-                DashboardTab(),
-                JourneyTab(),
-                DeviceConnectionScreen(),
-                SafetyEventHistoryScreen(),
-                ProfileScreen(),
+              children: [
+                const DashboardTab(),
+                JourneyTab(onSwitchTab: (i) => setState(() => _selectedTab = i)),
+                const DeviceConnectionScreen(),
+                const EmergencyAlertScreen(),
+                const ProfileScreen(),
               ],
             ),
             // Bottom nav
