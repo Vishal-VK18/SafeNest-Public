@@ -126,5 +126,19 @@ class StorageService {
     await _settings.clear();
     await _healthCache.clear();
   }
-}
 
+  // ─── Safety Event History ───────────────────────────────────────────────────
+  static List<String> get safetyHistory {
+    final raw = _settings.get(AppConstants.keySafetyHistory);
+    if (raw == null) return [];
+    return List<String>.from(raw as List);
+  }
+
+  static Future<void> addSafetyEvent(String eventJson) async {
+    final list = safetyHistory;
+    list.insert(0, eventJson);
+    // Keep only the last 50 events
+    if (list.length > 50) list.removeLast();
+    await _settings.put(AppConstants.keySafetyHistory, list);
+  }
+}

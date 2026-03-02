@@ -49,7 +49,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 const DashboardTab(),
                 JourneyTab(onSwitchTab: (i) => setState(() => _selectedTab = i)),
                 const DeviceConnectionScreen(),
-                const EmergencyAlertScreen(),
+                SafetyEventHistoryScreen(),
                 const ProfileScreen(),
               ],
             ),

@@ -49,13 +49,11 @@ class DashboardTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, RouteConstants.profile),
-                child: Container(
-                  width: 50, height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pushNamed(context, '/history'),
+                    icon: const Icon(Icons.more_horiz, color: Colors.grey),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(

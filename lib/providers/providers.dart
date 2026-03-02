@@ -8,6 +8,7 @@ import '../models/contact_model.dart';
 import '../models/hydration_model.dart';
 import '../models/sleep_oxygen_model.dart';
 import '../models/appointment_model.dart';
+import '../models/safety_event_model.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
@@ -427,3 +428,57 @@ final weeklyAnalyticsProvider = Provider<Map<String, dynamic>>((ref) {
     'isSunday': DateTime.now().weekday == DateTime.sunday,
   };
 });
+
+// ─── Safety Event History ───────────────────────────────────────────────────
+
+class SafetyHistoryNotifier extends StateNotifier<List<SafetyEventModel>> {
+  SafetyHistoryNotifier() : super([]) {
+    _load();
+  }
+
+  void _load() {
+    try {
+      final historyJson = StorageService.safetyHistory;
+      state = historyJson.map((s) => SafetyEventModel.fromJson(jsonDecode(s) as Map<String, dynamic>)).toList();
+    } catch (_) {
+      state = [];
+    }
+  }
+
+  Future<void> addEvent({
+    required SafetyEventType type,
+    required String description,
+    String? location,
+    SafetyEventStatus status = SafetyEventStatus.info,
+  }) async {
+    final event = SafetyEventModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: type,
+      timestamp: DateTime.now(),
+      description: description,
+      location: location,
+      status: status,
+    );
+
+    state = [event, ...state];
+    await StorageService.addSafetyEvent(jsonEncode(event.toJson()));
+  }
+
+  Future<void> recordFromHealth(HealthDataModel health, SafetyEventType type) async {
+    await addEvent(
+      type: type,
+      description: type == SafetyEventType.fall 
+          ? "Fall detected near your location." 
+          : "Emergency SOS triggered manually.",
+      location: health.gpsLat != 0 ? "${health.gpsLat.toStringAsFixed(4)}, ${health.gpsLng.toStringAsFixed(4)}" : "Unknown Location",
+      status: SafetyEventStatus.resolved,
+    );
+  }
+}
+
+final safetyHistoryProvider = StateNotifierProvider<SafetyHistoryNotifier, List<SafetyEventModel>>((ref) {
+  return SafetyHistoryNotifier();
+});
+
+// Used to trigger SOS manually from UI
+final manualSOSProvider = StateProvider<bool>((ref) => false);
