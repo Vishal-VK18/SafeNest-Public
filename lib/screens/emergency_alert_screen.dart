@@ -302,10 +302,31 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          'Your emergency contacts have been notified.\nStay calm, help is on the way.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(fontSize: 15, color: Colors.grey[600]),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            'Your emergency contacts have been notified.\nStay calm, help is on the way.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(fontSize: 15, color: Colors.grey[600]),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        // Return to Dashboard placed right below confirmation text
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(56),
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: const StadiumBorder(),
+                            ),
+                            child: Text(
+                              'Return to Dashboard',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -400,20 +421,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                   ],
                 ),
               )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize:     const Size.fromHeight(56),
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape:           const StadiumBorder(),
-                  ),
-                  child: const Text('Return to Dashboard'),
-                ),
-              ),
+            // (Return to Dashboard is now inside the _helpSent Column above)
           ],
         ),
       ),
