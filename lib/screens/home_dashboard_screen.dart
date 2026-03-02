@@ -9,6 +9,8 @@ import 'journey_tab.dart';
 import 'device_connection_screen.dart';
 import 'emergency_alert_screen.dart';
 import 'profile_screen.dart';
+import 'safety_event_history_screen.dart';
+import '../models/safety_event_model.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -19,16 +21,20 @@ class HomeDashboardScreen extends ConsumerStatefulWidget {
 
 class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   int _selectedTab = 0;
+  bool _sosVisible = false;
 
   @override
   Widget build(BuildContext context) {
-    // Auto-navigate to emergency screen on fall detection
+    // Auto-show SOS modal on fall detection or manual trigger
     ref.listen(fallAlertActiveProvider, (prev, next) {
       if (next == true && prev != true) {
-        // Only switch tab if we aren't already on alerts
-        if (_selectedTab != 3) {
-          setState(() => _selectedTab = 3);
-        }
+        _showSOSModal();
+      }
+    });
+
+    ref.listen(manualSOSProvider, (prev, next) {
+      if (next == true && prev != true) {
+        _showSOSModal();
       }
     });
 
@@ -43,7 +49,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 DashboardTab(),
                 JourneyTab(),
                 DeviceConnectionScreen(),
-                EmergencyAlertScreen(),
+                SafetyEventHistoryScreen(),
                 ProfileScreen(),
               ],
             ),
@@ -64,7 +70,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       (Icons.grid_view_rounded,  Icons.grid_view_outlined,   'DASHBOARD'),
       (Icons.auto_graph_rounded, Icons.auto_graph_outlined,  'JOURNEY'),
       (Icons.watch_rounded,      Icons.watch_outlined,       'DEVICES'),
-      (Icons.notifications,      Icons.notifications_none,   'ALERTS'),
+      (Icons.history_rounded,    Icons.history_outlined,     'HISTORY'),
       (Icons.person_rounded,     Icons.person_outline,       'PROFILE'),
     ];
 
@@ -117,5 +123,29 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _showSOSModal() async {
+    if (_sosVisible) return;
+    _sosVisible = true;
+
+    // Record the event
+    final health = ref.read(healthDataProvider);
+    final history = ref.read(safetyHistoryProvider.notifier);
+    await history.recordFromHealth(
+      health, 
+      ref.read(manualSOSProvider) ? SafetyEventType.sos : SafetyEventType.fall,
+    );
+
+    if (!mounted) return;
+
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      pageBuilder: (context, _, __) => const EmergencyAlertScreen(),
+    );
+
+    _sosVisible = false;
+    ref.read(manualSOSProvider.notifier).state = false;
   }
 }

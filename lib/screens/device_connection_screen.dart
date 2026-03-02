@@ -1,4 +1,4 @@
-// lib/screens/device_connection_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -23,6 +23,25 @@ class DeviceConnectionScreen extends ConsumerWidget {
 
     final isBluetoothOn = btStateAsync.value == BluetoothAdapterState.on;
     final networkName   = networkNameAsync.value ?? 'Checking...';
+
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.bluetooth_disabled, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                'Bluetooth not supported on this platform',
+                style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,

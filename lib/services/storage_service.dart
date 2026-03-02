@@ -59,6 +59,17 @@ class StorageService {
   static Future<void> setLastHealthPacket(String json) =>
       _healthCache.put(AppConstants.keyLastHealthPacket, json);
 
+  // ─── Safety History ────────────────────────────────────────────────────────
+  static List<String> get safetyHistory =>
+      List<String>.from(_healthCache.get(AppConstants.keySafetyHistory, defaultValue: []) as List);
+
+  static Future<void> addSafetyEvent(String eventJson) async {
+    final history = safetyHistory;
+    history.insert(0, eventJson); // Newest first
+    if (history.length > 50) history.removeLast(); // Keep top 50
+    await _healthCache.put(AppConstants.keySafetyHistory, history);
+  }
+
   // ─── Clear all ─────────────────────────────────────────────────────────────
   static Future<void> clearAll() async {
     await _settings.clear();

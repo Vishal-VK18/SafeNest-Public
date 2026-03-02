@@ -31,7 +31,7 @@ class JourneyTab extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => Navigator.pushNamed(context, '/profile'),
+                onPressed: () => Navigator.pushNamed(context, '/history'),
                 icon: const Icon(Icons.more_horiz, color: AppColors.lavenderText),
               ),
             ],

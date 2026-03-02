@@ -53,12 +53,20 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
 
   void _iAmSafe() {
     _timer?.cancel();
+    ref.read(healthDataProvider.notifier).reset();
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final health = ref.watch(healthDataProvider);
+
+    // Listen to fall detection becoming false to potentially auto-dismiss if user is safe
+    ref.listen(fallAlertActiveProvider, (prev, next) {
+      if (next == false && prev == true) {
+        Navigator.of(context).pop();
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.bgLight,
@@ -404,7 +412,10 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    ref.read(healthDataProvider.notifier).reset();
+                    Navigator.of(context).pop();
+                  },
                   style: ElevatedButton.styleFrom(
                     minimumSize:     const Size.fromHeight(56),
                     backgroundColor: AppColors.primary,

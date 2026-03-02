@@ -47,27 +47,36 @@ class DashboardTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/profile'),
-                child: Container(
-                  width: 50, height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
+              Row(
+                children: [
+                   IconButton(
+                    onPressed: () => Navigator.pushNamed(context, '/history'),
+                    icon: const Icon(Icons.more_horiz, color: Colors.grey),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(25),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/profile'),
                     child: Container(
-                      color: AppColors.primary.withOpacity(0.1),
-                      child: Center(
-                        child: Text(
-                          pregnancy.userName.isNotEmpty ? pregnancy.userName[0] : 'U',
-                          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                      width: 50, height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(25),
+                        child: Container(
+                          color: AppColors.primary.withOpacity(0.1),
+                          child: Center(
+                            child: Text(
+                              pregnancy.userName.isNotEmpty ? pregnancy.userName[0] : 'U',
+                              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -123,7 +132,7 @@ class DashboardTab extends ConsumerWidget {
           
           // ── Emergency Button ──────────────────────────────────────────────
           ElevatedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, '/alerts'),
+            onPressed: () => ref.read(manualSOSProvider.notifier).state = true,
             icon: const Icon(Icons.contact_support),
             label: const Text('Contact Care Provider'),
             style: ElevatedButton.styleFrom(

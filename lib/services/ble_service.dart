@@ -1,6 +1,6 @@
-// lib/services/ble_service.dart
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -50,8 +50,14 @@ class BleService {
 
   // ─── Start / Stop ────────────────────────────────────────────────────────────
   Future<void> start() async {
-    await _startAutoScan();
+    if (_isBleSupported) {
+      await _startAutoScan();
+    } else {
+      debugPrint('[BLE] Support not available on this platform.');
+    }
   }
+
+  bool get _isBleSupported => Platform.isAndroid || Platform.isIOS;
 
   void dispose() {
     _destroyed = true;
@@ -74,6 +80,7 @@ class BleService {
 
   // ─── Manual scan (UI-initiated, shows all SafeNest devices) ─────────────────
   Future<void> startManualScan() async {
+    if (!_isBleSupported) return;
     if (_isScanning) {
       await FlutterBluePlus.stopScan();
     }
@@ -132,6 +139,7 @@ class BleService {
 
   // ─── Internal BLE Scan (auto-mode) ───────────────────────────────────────────
   Future<void> _runScan({bool autoConnect = false}) async {
+    if (!_isBleSupported) return;
     try {
       await FlutterBluePlus.startScan(
         timeout: Duration(seconds: AppConstants.scanTimeoutSec),

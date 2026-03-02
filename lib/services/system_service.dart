@@ -29,7 +29,12 @@ class SystemService {
   }
 
   // ─── Bluetooth ────────────────────────────────────────────────────────────
-  Stream<BluetoothAdapterState> get bluetoothState => FlutterBluePlus.adapterState;
+  Stream<BluetoothAdapterState> get bluetoothState {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return FlutterBluePlus.adapterState;
+    }
+    return Stream.value(BluetoothAdapterState.unavailable);
+  }
 
   Future<void> turnOnBluetooth() async {
     if (Platform.isAndroid) {
