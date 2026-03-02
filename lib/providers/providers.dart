@@ -1,6 +1,4 @@
-// lib/providers/providers.dart
-// Single file exposing all Riverpod providers for SafeNest.
-
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_data_model.dart';
@@ -12,6 +10,7 @@ import '../models/sleep_oxygen_model.dart';
 import '../models/appointment_model.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
+import '../utils/constants.dart';
 
 // ─── BLE Service singleton ──────────────────────────────────────────────────
 final bleServiceProvider = Provider<BleService>((_) => BleService.instance);

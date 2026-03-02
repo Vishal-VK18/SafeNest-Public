@@ -1,4 +1,4 @@
-// lib/main.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,28 +25,37 @@ import 'screens/logs/temperature_page.dart';
 import 'screens/sim_module_status_screen.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Force portrait mode
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.dumpErrorToConsole(details);
+    };
 
-  // Initialize local storage (Hive)
-  await StorageService.init();
+    // Force portrait mode
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
 
-  // Initialize notifications
-  await NotificationService.init();
+    // Initialize local storage (Hive)
+    await StorageService.init();
 
-  // Startup Permissions
-  await SystemService.instance.requestPermissions();
+    // Initialize notifications
+    await NotificationService.init();
 
-  // Start BLE service
-  await BleService.instance.start();
+    // Startup Permissions
+    await SystemService.instance.requestPermissions();
 
-  runApp(
-    const ProviderScope(child: SafeNestApp()),
-  );
+    // Start BLE service
+    await BleService.instance.start();
+
+    runApp(
+      const ProviderScope(child: SafeNestApp()),
+    );
+  }, (error, stack) {
+    debugPrint('SafeNest Global Error: $error');
+    debugPrint(stack.toString());
+  });
 }
 
 class SafeNestApp extends StatelessWidget {

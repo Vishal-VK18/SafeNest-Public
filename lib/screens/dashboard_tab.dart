@@ -57,19 +57,30 @@ class DashboardTab extends ConsumerWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(25),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/profile'),
                     child: Container(
-                      color: AppColors.primary.withOpacity(0.1),
-                      child: Center(
-                        child: Text(
-                          pregnancy.userName.isNotEmpty ? pregnancy.userName[0] : 'U',
-                          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                      width: 50, height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(25),
+                        child: Container(
+                          color: AppColors.primary.withOpacity(0.1),
+                          child: Center(
+                            child: Text(
+                              pregnancy.userName.isNotEmpty ? pregnancy.userName[0] : 'U',
+                              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ],
           ),

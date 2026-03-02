@@ -40,7 +40,8 @@ class AppConstants {
   static const String keyPairedSimId      = 'paired_sim_id';
   static const String keyPregnancyWeek    = 'pregnancy_week';
   static const String keyPregnancyStartDate = 'pregnancy_start_date';
-  static const String keyUserName         = 'user_name';
+  static const String keyUserName           = 'user_name';
+  static const String keySafetyHistory      = 'safety_history';
   static const String keyLastHealthPacket = 'last_health_packet';
   static const String keyLastGpsLat       = 'last_gps_lat';
   static const String keyLastGpsLng       = 'last_gps_lng';
