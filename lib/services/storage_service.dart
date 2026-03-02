@@ -1,4 +1,4 @@
-// lib/services/storage_service.dart
+﻿// lib/services/storage_service.dart
 import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/constants.dart';
 
@@ -12,7 +12,7 @@ class StorageService {
     _healthCache  = await Hive.openBox(AppConstants.hiveBoxHealthCache);
   }
 
-  // ─── Paired device IDs ───────────────────────────────────────────────────────
+  // â”€â”€â”€ Paired device IDs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static String? get pairedWatchId =>
       _settings.get(AppConstants.keyPairedWatchId) as String?;
   static Future<void> setPairedWatchId(String id) =>
@@ -23,7 +23,7 @@ class StorageService {
   static Future<void> setPairedSimId(String id) =>
       _settings.put(AppConstants.keyPairedSimId, id);
 
-  // ─── Pregnancy ───────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Pregnancy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static int? get pregnancyWeek =>
       _settings.get(AppConstants.keyPregnancyWeek) as int?;
   static Future<void> setPregnancyWeek(int week) =>
@@ -36,13 +36,13 @@ class StorageService {
   static Future<void> setPregnancyStartDate(DateTime date) =>
       _settings.put(AppConstants.keyPregnancyStartDate, date.toIso8601String());
 
-  // ─── User name ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ User name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static String get userName =>
       (_settings.get(AppConstants.keyUserName) as String?) ?? 'Sarah';
   static Future<void> setUserName(String name) =>
       _settings.put(AppConstants.keyUserName, name);
 
-  // ─── Last known GPS ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Last known GPS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static double get lastGpsLat =>
       (_healthCache.get(AppConstants.keyLastGpsLat) as double?) ?? 0.0;
   static double get lastGpsLng =>
@@ -53,13 +53,13 @@ class StorageService {
     await _healthCache.put(AppConstants.keyLastGpsLng, lng);
   }
 
-  // ─── Last health packet (JSON string) ───────────────────────────────────────
+  // â”€â”€â”€ Last health packet (JSON string) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static String? get lastHealthPacket =>
       _healthCache.get(AppConstants.keyLastHealthPacket) as String?;
   static Future<void> setLastHealthPacket(String json) =>
       _healthCache.put(AppConstants.keyLastHealthPacket, json);
 
-  // ─── Intelligent Models Data ─────────────────────────────────────────────────
+  // â”€â”€â”€ Intelligent Models Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static String? get hydrationData =>
       _settings.get(AppConstants.keyHydrationData) as String?;
   static Future<void> setHydrationData(String json) =>
@@ -75,7 +75,7 @@ class StorageService {
   static Future<void> setAppointments(String json) =>
       _settings.put(AppConstants.keyAppointments, json);
 
-  // ─── Auth / User Profile ─────────────────────────────────────────────────
+  // â”€â”€â”€ Auth / User Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static bool get isLoggedIn =>
       (_settings.get(AppConstants.keyIsLoggedIn) as bool?) ?? false;
   static Future<void> setIsLoggedIn(bool v) =>
@@ -121,10 +121,23 @@ class StorageService {
   static Future<void> setBiometricEnabled(bool val) =>
       _settings.put(AppConstants.keyBiometricEnabled, val);
 
-  // ─── Clear all ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Clear all â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static Future<void> clearAll() async {
     await _settings.clear();
     await _healthCache.clear();
   }
-}
 
+  // --- Safety Event History ---
+  static List<String> get safetyHistory {
+    final raw = _settings.get(AppConstants.keySafetyHistory);
+    if (raw == null) return [];
+    return List<String>.from(raw as List);
+  }
+
+  static Future<void> addSafetyEvent(String eventJson) async {
+    final list = safetyHistory;
+    list.insert(0, eventJson);
+    if (list.length > 50) list.removeLast();
+    await _settings.put(AppConstants.keySafetyHistory, list);
+  }
+}

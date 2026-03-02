@@ -1,4 +1,4 @@
-// lib/screens/dashboard_tab.dart
+﻿// lib/screens/dashboard_tab.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,14 +19,13 @@ class DashboardTab extends ConsumerWidget {
     final deviceState = ref.watch(deviceStatusProvider);
     
     final isConnected = deviceState.watch.status == ConnectionStatus.connected;
-    final hasData     = health.receivedAt.year > 2000; // Received real packet
+    final hasData     = health.receivedAt.year > 2000;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ────────────────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -34,7 +33,7 @@ class DashboardTab extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${pregnancy.greeting},',
+                    '{pregnancy.greeting},',
                     style: GoogleFonts.inter(
                       fontSize: 14, fontWeight: FontWeight.bold,
                       color: Colors.grey[400],
@@ -49,17 +48,15 @@ class DashboardTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, RouteConstants.profile),
-                child: Container(
-                  width: 50, height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pushNamed(context, '/history'),
+                    icon: const Icon(Icons.more_horiz, color: Colors.grey),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/profile'),
+                    onTap: () => Navigator.pushNamed(context, RouteConstants.profile),
                     child: Container(
                       width: 50, height: 50,
                       decoration: BoxDecoration(
@@ -85,19 +82,14 @@ class DashboardTab extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-
-          // ── Safety Banner ──────────────────────────────────────────────────
           _buildSafetyBanner(isConnected, health.fallDetected),
-          
           const SizedBox(height: 40),
-
-          // ── Vitals Section ───────────────────────────────────────────────
           InteractiveCardWrapper(
             onTap: () => Navigator.pushNamed(context, RouteConstants.heartRate),
             child: _buildVitalCard(
               icon: Icons.favorite,
               label: 'Heart Rate',
-              value: isConnected && hasData ? '${health.heartRate}' : '--',
+              value: isConnected && hasData ? '{health.heartRate}' : '--',
               unit: 'BPM',
               status: isConnected && hasData ? (health.isHeartRateNormal ? 'Normal' : 'Alert') : 'Waiting',
               isNormal: health.isHeartRateNormal || !hasData,
@@ -110,7 +102,7 @@ class DashboardTab extends ConsumerWidget {
               icon: Icons.thermostat,
               label: 'Body Temp',
               value: isConnected && hasData ? health.temperature.toStringAsFixed(1) : '--',
-              unit: '°C',
+              unit: 'C',
               status: isConnected && hasData ? (health.isTemperatureNormal ? 'Normal' : 'Alert') : 'Waiting',
               isNormal: health.isTemperatureNormal || !hasData,
             ),
@@ -127,10 +119,7 @@ class DashboardTab extends ConsumerWidget {
               isNormal: !health.fallDetected,
             ),
           ),
-
           const SizedBox(height: 40),
-
-          // ── Weekly Summary ───────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -140,10 +129,7 @@ class DashboardTab extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _buildActivityChart(),
-
           const SizedBox(height: 32),
-          
-          // ── Emergency Button ──────────────────────────────────────────────
           ElevatedButton.icon(
             onPressed: () => Navigator.pushNamed(context, RouteConstants.alerts),
             icon: const Icon(Icons.contact_support),
@@ -160,7 +146,7 @@ class DashboardTab extends ConsumerWidget {
           const SizedBox(height: 16),
           Center(
             child: Text(
-              isConnected ? 'Updated ${_timeAgo(health.receivedAt)}' : 'Disconnected',
+              isConnected ? 'Updated {_timeAgo(health.receivedAt)}' : 'Disconnected',
               style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400], letterSpacing: 2),
             ),
           ),
@@ -174,7 +160,6 @@ class DashboardTab extends ConsumerWidget {
     Color txt = AppColors.statusGreen;
     String label = "You are safe right now.";
     IconData icon = Icons.check_circle;
-
     if (!connected) {
       bgColor = Colors.grey.withOpacity(0.1);
       txt = Colors.grey;
@@ -186,7 +171,6 @@ class DashboardTab extends ConsumerWidget {
       label = "Fall detected! Sending alert.";
       icon = Icons.warning;
     }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -318,8 +302,8 @@ class DashboardTab extends ConsumerWidget {
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inSeconds < 10) return 'just now';
-    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inSeconds < 60) return '{diff.inSeconds}s ago';
+    if (diff.inMinutes < 60) return '{diff.inMinutes}m ago';
     return DateFormat('HH:mm').format(dt);
   }
 }

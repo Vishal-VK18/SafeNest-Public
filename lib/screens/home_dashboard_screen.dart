@@ -1,4 +1,4 @@
-// lib/screens/home_dashboard_screen.dart
+﻿// lib/screens/home_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,7 +25,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Auto-show SOS modal on fall detection or manual trigger
     ref.listen(fallAlertActiveProvider, (prev, next) {
       if (next == true && prev != true) {
         _showSOSModal();
@@ -49,11 +48,10 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 const DashboardTab(),
                 JourneyTab(onSwitchTab: (i) => setState(() => _selectedTab = i)),
                 const DeviceConnectionScreen(),
-                const EmergencyAlertScreen(),
+                SafetyEventHistoryScreen(),
                 const ProfileScreen(),
               ],
             ),
-            // Bottom nav
             Positioned(
               left: 0, right: 0, bottom: 0,
               child: _buildBottomNav(),
@@ -64,7 +62,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     );
   }
 
-  // ─── Bottom Navigation ─────────────────────────────────────────────────────
   Widget _buildBottomNav() {
     const tabs = [
       (Icons.grid_view_rounded,  Icons.grid_view_outlined,   'DASHBOARD'),
@@ -129,11 +126,10 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     if (_sosVisible) return;
     _sosVisible = true;
 
-    // Record the event
     final health = ref.read(healthDataProvider);
     final history = ref.read(safetyHistoryProvider.notifier);
     await history.recordFromHealth(
-      health, 
+      health,
       ref.read(manualSOSProvider) ? SafetyEventType.sos : SafetyEventType.fall,
     );
 
