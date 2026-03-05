@@ -9,6 +9,7 @@ import '../models/device_status_model.dart';
 import '../utils/constants.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import 'background_service.dart';
 
 /// Central BLE manager for SafeNest.
 ///
@@ -35,6 +36,7 @@ class BleService {
 
   // ─── State ────────────────────────────────────────────────────────────────────
   DeviceStatusModel _deviceStatus = DeviceStatusModel.initial();
+  HealthDataModel   _lastHealth   = HealthDataModel.empty();
   BluetoothDevice?  _watchDevice;
   BluetoothDevice?  _simDevice;
   Timer?            _heartbeatTimer;
@@ -75,6 +77,31 @@ class BleService {
   Future<void> _startAutoScan() async {
     debugPrint('[BLE] Starting auto-scan...');
     _updateWatchStatus(ConnectionStatus.scanning);
+
+    // Try direct reconnect to cached device first — skips scan entirely
+    final cachedId = StorageService.pairedWatchId;
+    if (cachedId != null && cachedId.isNotEmpty) {
+      try {
+        debugPrint('[BLE] Trying direct reconnect to: $cachedId');
+
+        // Check if already connected
+        for (final d in FlutterBluePlus.connectedDevices) {
+          if (d.remoteId.str == cachedId) {
+            debugPrint('[BLE] Already connected — subscribing directly');
+            await _connectToWatch(d);
+            return;
+          }
+        }
+
+        // Try connecting directly without scanning
+        final device = BluetoothDevice(remoteId: DeviceIdentifier(cachedId));
+        await _connectToWatch(device);
+        return;
+      } catch (e) {
+        debugPrint('[BLE] Direct reconnect failed — falling back to scan: $e');
+      }
+    }
+
     await _runScan(autoConnect: true);
   }
 
@@ -254,9 +281,8 @@ class BleService {
                 AppConstants.bleCharacteristicUUID.toLowerCase()) {
               await char.setNotifyValue(true);
               char.onValueReceived.listen((bytes) {
-                final raw = utf8.decode(bytes, allowMalformed: true);
-                final model = HealthDataModel.fromJsonString(raw);
-                _onPacketReceived(model);
+                final raw = utf8.decode(bytes, allowMalformed: true).trim();
+                _handleBleValue(raw);
               });
               debugPrint('[BLE] Subscribed to health characteristic');
               return;
@@ -270,9 +296,56 @@ class BleService {
     }
   }
 
+  // ─── Handle raw BLE value (comma-separated: "36.75,0") ───────────────────
+  void _handleBleValue(String raw) {
+    if (raw.isEmpty) return;
+
+    final parts = raw.split(',');
+
+    // Part 0 — temperature
+    final temp = double.tryParse(parts[0].trim());
+    if (temp == null) return;
+
+    // Part 1 — fall
+    final fall = parts.length >= 2 && parts[1].trim() == '1';
+
+    // Part 2 — tempAlert: 0=normal, 1=high
+    final tempAlert = parts.length >= 3
+        ? (int.tryParse(parts[2].trim()) ?? 0)
+        : 0;
+
+    // Part 3 — SIM signal raw value from AT+CSQ (0-31)
+    // Convert CSQ value to 0-4 scale for display
+    int simSignal = 0;
+    if (parts.length >= 4) {
+      final csq = int.tryParse(parts[3].trim()) ?? 0;
+      if (csq >= 20) simSignal = 4;
+      else if (csq >= 15) simSignal = 3;
+      else if (csq >= 10) simSignal = 2;
+      else if (csq > 0) simSignal = 1;
+      else simSignal = 0;
+    }
+
+    // Part 4 — network type string: "4G", "3G", "2G", "—"
+    final networkType = parts.length >= 5
+        ? parts[4].trim()
+        : _lastHealth.networkType;
+
+    final model = _lastHealth.copyWith(
+      temperature: temp,
+      fallDetected: fall,
+      tempAlert: tempAlert,
+      simSignal: simSignal,
+      networkType: networkType,
+      receivedAt: DateTime.now(),
+    );
+    _onPacketReceived(model);
+  }
+
   // ─── Packet received ─────────────────────────────────────────────────────────
   void _onPacketReceived(HealthDataModel model) {
     _lastPacketTime = DateTime.now();
+    _lastHealth = model;
     if (!_healthCtrl.isClosed) _healthCtrl.add(model);
 
     // Update battery from BLE packet if provided
@@ -302,12 +375,20 @@ class BleService {
     // Check thresholds → notifications
     if (model.fallDetected) {
       NotificationService.showFallAlert();
+      BackgroundService.showFallNotification();
     }
     if (!model.isHeartRateNormal && model.heartRate > 0) {
       NotificationService.showAbnormalHeartRate(model.heartRate);
     }
-    if (!model.isTemperatureNormal && model.temperature > 0) {
+    
+    // High temp from native flag
+    if (model.tempAlert == 1) {
       NotificationService.showHighTemperature(model.temperature);
+      BackgroundService.showTempNotification(model.temperature);
+    }
+    // Low temp from native flag
+    if (model.tempAlert == -1) {
+      NotificationService.showLowTemperature(model.temperature);
     }
   }
 

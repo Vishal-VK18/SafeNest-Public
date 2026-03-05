@@ -1,9 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants/route_constants.dart';
+import '../../providers/providers.dart';
+import '../../models/device_status_model.dart';
+import '../../models/temperature_entry.dart';
 
-class TemperaturePage extends StatelessWidget {
+class TemperaturePage extends ConsumerWidget {
   const TemperaturePage({super.key});
 
   // Strict Design System Colors
@@ -15,9 +20,16 @@ class TemperaturePage extends StatelessWidget {
   static const Color graphOrange = Color(0xFFFFAB40);
   static const Color mutedGray = Color(0xFF8E8E93);
   static const Color textBlack = Color(0xFF1C1C1E);
+  static const Color alertRed = Color(0xFFF44336);
+  static const Color alertRedTint = Color(0xFFFFEBEE);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final health = ref.watch(healthDataProvider);
+    final deviceStatus = ref.watch(deviceStatusProvider);
+    final tempLog = ref.watch(temperatureLogProvider);
+    final isConnected = deviceStatus.watch.status == ConnectionStatus.connected;
+
     return Scaffold(
       backgroundColor: backgroundWhite,
       appBar: AppBar(
@@ -42,15 +54,15 @@ class TemperaturePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              _buildHeader(),
+              _buildHeader(isConnected),
               const SizedBox(height: 24),
-              _buildMainTemperatureCard(),
+              _buildMainTemperatureCard(health.temperature, health.isTemperatureNormal),
               const SizedBox(height: 16),
-              _buildInfoCardsRow(),
+              _buildInfoCardsRow(health.receivedAt, health.isTemperatureNormal),
               const SizedBox(height: 32),
               _buildHistoryHeader(),
               const SizedBox(height: 16),
-              _buildHistoryList(),
+              _buildHistoryList(tempLog.take(3).toList()),
               const SizedBox(height: 32),
               _buildBottomButton(context),
               const SizedBox(height: 24),
@@ -61,7 +73,7 @@ class TemperaturePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isConnected) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -83,14 +95,14 @@ class TemperaturePage extends StatelessWidget {
                 Container(
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(
-                    color: successGreen,
+                  decoration: BoxDecoration(
+                    color: isConnected ? successGreen : mutedGray,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  "Connected to Watch",
+                  isConnected ? "Connected to Watch" : "Disconnected",
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -115,7 +127,18 @@ class TemperaturePage extends StatelessWidget {
     );
   }
 
-  Widget _buildMainTemperatureCard() {
+  Widget _buildMainTemperatureCard(double temperature, bool isNormal) {
+    final tempDisplay = temperature > 0
+        ? temperature.toStringAsFixed(1)
+        : '--.-';
+    final badgeText = temperature > 0 ? (isNormal ? "NORMAL" : "ALERT") : "WAITING";
+    final badgeColor = temperature > 0
+        ? (isNormal ? successGreen : alertRed)
+        : mutedGray;
+    final badgeBg = temperature > 0
+        ? (isNormal ? successGreenTint : alertRedTint)
+        : cardGray;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -148,15 +171,15 @@ class TemperaturePage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: successGreenTint,
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  "NORMAL",
+                  badgeText,
                   style: GoogleFonts.outfit(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: successGreen,
+                    color: badgeColor,
                   ),
                 ),
               ),
@@ -168,7 +191,7 @@ class TemperaturePage extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                "36.7",
+                tempDisplay,
                 style: GoogleFonts.outfit(
                   fontSize: 48,
                   fontWeight: FontWeight.w700,
@@ -199,7 +222,13 @@ class TemperaturePage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCardsRow() {
+  Widget _buildInfoCardsRow(DateTime receivedAt, bool isNormal) {
+    final hasData = receivedAt.year > 2000;
+    final timeText = hasData
+        ? DateFormat('hh:mm a').format(receivedAt)
+        : '--:--';
+    final statusText = hasData ? (isNormal ? 'Stable' : 'Elevated') : 'Waiting';
+
     return Row(
       children: [
         Expanded(
@@ -208,7 +237,7 @@ class TemperaturePage extends StatelessWidget {
             iconColor: primaryLilac,
             iconBg: primaryLilac.withOpacity(0.15),
             label: "LAST CHECK",
-            value: "09:12 AM",
+            value: timeText,
           ),
         ),
         const SizedBox(width: 16),
@@ -218,7 +247,7 @@ class TemperaturePage extends StatelessWidget {
             iconColor: successGreen,
             iconBg: successGreen.withOpacity(0.15),
             label: "STATUS",
-            value: "Stable",
+            value: statusText,
           ),
         ),
       ],
@@ -239,7 +268,7 @@ class TemperaturePage extends StatelessWidget {
           ),
         ),
         Text(
-          "LAST 3 HOURS",
+          "RECENT",
           style: GoogleFonts.outfit(
             fontSize: 12,
             fontWeight: FontWeight.w500,
@@ -250,30 +279,45 @@ class TemperaturePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryList() {
+  Widget _buildHistoryList(List<TemperatureEntry> entries) {
+    if (entries.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: cardGray,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Center(
+          child: Text(
+            "No readings yet",
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: mutedGray,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
-      children: [
-        _HistoryItem(
-          value: "36.7°C",
-          subtext: "Within normal range",
-          time: "09:12 AM",
-          iconColor: graphOrange,
-        ),
-        const SizedBox(height: 12),
-        _HistoryItem(
-          value: "36.5°C",
-          subtext: "Slightly lower baseline",
-          time: "08:45 AM",
-          iconColor: Colors.blueAccent.shade100,
-        ),
-        const SizedBox(height: 12),
-        _HistoryItem(
-          value: "36.8°C",
-          subtext: "Optimal state",
-          time: "07:30 AM",
-          iconColor: graphOrange,
-        ),
-      ],
+      children: entries.asMap().entries.map((e) {
+        final entry = e.value;
+        final isNormal = entry.value >= 35.0 && entry.value < 37.5;
+        final subtext = isNormal ? "Within normal range" : "Temperature elevated";
+        final time = DateFormat('hh:mm a').format(entry.timestamp);
+        final color = isNormal ? graphOrange : Colors.redAccent.shade100;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: e.key < entries.length - 1 ? 12 : 0),
+          child: _HistoryItem(
+            value: "${entry.value.toStringAsFixed(1)}°C",
+            subtext: subtext,
+            time: time,
+            iconColor: color,
+          ),
+        );
+      }).toList(),
     );
   }
 
