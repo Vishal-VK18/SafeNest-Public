@@ -12,6 +12,7 @@ import 'profile_screen.dart';
 import 'safety_event_history_screen.dart';
 import '../models/safety_event_model.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
