@@ -127,7 +127,7 @@ class StorageService {
     await _healthCache.clear();
   }
 
-  // --- Safety Event History ---
+  // ─── Safety Event History ───────────────────────────────────────────────────
   static List<String> get safetyHistory {
     final raw = _settings.get(AppConstants.keySafetyHistory);
     if (raw == null) return [];
@@ -137,7 +137,14 @@ class StorageService {
   static Future<void> addSafetyEvent(String eventJson) async {
     final list = safetyHistory;
     list.insert(0, eventJson);
+    // Keep only the last 50 events
     if (list.length > 50) list.removeLast();
     await _settings.put(AppConstants.keySafetyHistory, list);
   }
+
+  static bool getBatteryPermissionAsked() =>
+      (_settings.get('battery_permission_asked') as bool?) ?? false;
+
+  static Future<void> setBatteryPermissionAsked(bool val) =>
+      _settings.put('battery_permission_asked', val);
 }

@@ -4,11 +4,11 @@
 class AppConstants {
   // ─── BLE UUIDs ──────────────────────────────────────────────────────────────
   // Update these to match your actual ESP32-C3 firmware UUIDs
-  static const String bleServiceUUID        = '12345678-1234-5678-1234-56789abcdef0';
-  static const String bleCharacteristicUUID = '12345678-1234-5678-1234-56789abcdef1';
+  static const String bleServiceUUID        = '12345678-1234-1234-1234-123456789abc';
+  static const String bleCharacteristicUUID = 'abcd1234-ab12-ab12-ab12-abcdef123456';
 
   // Device name filters
-  static const String watchNamePrefix   = 'SafeNest-Watch';
+  static const String watchNamePrefix   = 'SafeNest Band';
   static const String simUnitNamePrefix = 'SafeNest-SIM';
   static const String safeNestPrefix    = 'SafeNest'; // generic prefix for scan filter
 
@@ -30,6 +30,7 @@ class AppConstants {
   static const int notifIdTemperature = 1003;
   static const int notifIdDisconnect  = 1004;
   static const int notifIdSimError    = 1005;
+  static const int notifIdLowTemperature = 1006;
 
   // ─── Hive box names ─────────────────────────────────────────────────────────
   static const String hiveBoxSettings    = 'settings';

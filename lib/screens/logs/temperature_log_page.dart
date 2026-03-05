@@ -1,63 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/providers.dart';
+import '../../models/temperature_entry.dart';
 
-class TemperatureEntry {
-  final double value;
-  final DateTime timestamp;
-
-  TemperatureEntry({required this.value, required this.timestamp});
-}
-
-class TemperatureLogPage extends StatefulWidget {
+class TemperatureLogPage extends ConsumerStatefulWidget {
   const TemperatureLogPage({super.key});
 
   @override
-  State<TemperatureLogPage> createState() => _TemperatureLogPageState();
+  ConsumerState<TemperatureLogPage> createState() => _TemperatureLogPageState();
 }
 
-class _TemperatureLogPageState extends State<TemperatureLogPage> {
+class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
   late DateTime fromDate;
   late DateTime toDate;
-  late List<TemperatureEntry> allEntries;
-  late List<TemperatureEntry> filteredEntries;
 
   @override
   void initState() {
     super.initState();
     toDate = DateTime.now();
     fromDate = DateTime.now().subtract(const Duration(days: 7));
-
-    // Initialize mock data
-    allEntries = [
-      TemperatureEntry(value: 36.7, timestamp: DateTime.now().subtract(const Duration(hours: 1))),
-      TemperatureEntry(value: 37.8, timestamp: DateTime.now().subtract(const Duration(hours: 4))),
-      TemperatureEntry(value: 36.5, timestamp: DateTime.now().subtract(const Duration(hours: 10))),
-      TemperatureEntry(value: 38.2, timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 2))),
-      TemperatureEntry(value: 36.8, timestamp: DateTime.now().subtract(const Duration(days: 2))),
-      TemperatureEntry(value: 37.0, timestamp: DateTime.now().subtract(const Duration(days: 3))),
-      TemperatureEntry(value: 36.6, timestamp: DateTime.now().subtract(const Duration(days: 4))),
-      TemperatureEntry(value: 36.4, timestamp: DateTime.now().subtract(const Duration(days: 8))), // Outside range
-    ];
-
-    _applyFilter();
   }
 
-  void _applyFilter() {
-    setState(() {
-      filteredEntries = allEntries.where((entry) {
-        final date = DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day);
-        final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
-        final end = DateTime(toDate.year, toDate.month, toDate.day);
+  List<TemperatureEntry> _filterEntries(List<TemperatureEntry> allEntries) {
+    final filtered = allEntries.where((entry) {
+      final date = DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day);
+      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
+      final end = DateTime(toDate.year, toDate.month, toDate.day);
 
-        return date.isAtSameMomentAs(start) ||
-            date.isAtSameMomentAs(end) ||
-            (date.isAfter(start) && date.isBefore(end));
-      }).toList();
+      return date.isAtSameMomentAs(start) ||
+          date.isAtSameMomentAs(end) ||
+          (date.isAfter(start) && date.isBefore(end));
+    }).toList();
 
-      filteredEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    });
+    filtered.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return filtered;
   }
 
   Future<void> _selectFromDate(BuildContext context) async {
@@ -70,7 +49,6 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
     );
     if (picked != null && picked != fromDate) {
       setState(() => fromDate = picked);
-      _applyFilter();
     }
   }
 
@@ -84,7 +62,6 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
     );
     if (picked != null && picked != toDate) {
       setState(() => toDate = picked);
-      _applyFilter();
     }
   }
 
@@ -103,6 +80,9 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
 
   @override
   Widget build(BuildContext context) {
+    final allEntries = ref.watch(temperatureLogProvider);
+    final filteredEntries = _filterEntries(allEntries);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -125,9 +105,9 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
           children: [
             _buildRangeSelector(),
             Expanded(
-              child: filteredEntries.isEmpty ? _buildEmptyState() : _buildLogList(),
+              child: filteredEntries.isEmpty ? _buildEmptyState() : _buildLogList(filteredEntries),
             ),
-            _buildExportButton(),
+            _buildExportButton(filteredEntries),
           ],
         ),
       ),
@@ -201,12 +181,12 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
     );
   }
 
-  Widget _buildLogList() {
+  Widget _buildLogList(List<TemperatureEntry> entries) {
     return ListView.separated(
       padding: const EdgeInsets.all(20),
-      itemCount: filteredEntries.length,
+      itemCount: entries.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _buildLogCard(filteredEntries[index]),
+      itemBuilder: (context, index) => _buildLogCard(entries[index]),
     );
   }
 
@@ -237,7 +217,7 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${entry.value}°C',
+                  '${entry.value.toStringAsFixed(1)}°C',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -245,7 +225,7 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
                   ),
                 ),
                 Text(
-                  DateFormat('MMMM dd, hh:mm AA').format(entry.timestamp),
+                  DateFormat('MMMM dd, hh:mm a').format(entry.timestamp),
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -274,7 +254,7 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
     );
   }
 
-  Widget _buildExportButton() {
+  Widget _buildExportButton(List<TemperatureEntry> filteredEntries) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
       child: Container(
@@ -296,12 +276,8 @@ class _TemperatureLogPageState extends State<TemperatureLogPage> {
           child: InkWell(
             borderRadius: BorderRadius.circular(28),
             onTap: () {
-              print("Exporting data:");
-              for (var entry in filteredEntries) {
-                print("${entry.timestamp}: ${entry.value}°C");
-              }
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Logs printed to console')),
+                SnackBar(content: Text('${filteredEntries.length} entries exported')),
               );
             },
             child: Row(

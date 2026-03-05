@@ -1,9 +1,9 @@
 ﻿// lib/screens/home_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../providers/providers.dart';
 import '../utils/app_theme.dart';
+import '../widgets/bottom_nav_bar.dart';
 import 'dashboard_tab.dart';
 import 'journey_tab.dart';
 import 'device_connection_screen.dart';
@@ -11,6 +11,7 @@ import 'emergency_alert_screen.dart';
 import 'profile_screen.dart';
 import 'safety_event_history_screen.dart';
 import '../models/safety_event_model.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -22,6 +23,14 @@ class HomeDashboardScreen extends ConsumerStatefulWidget {
 class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   int _selectedTab = 0;
   bool _sosVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestBackgroundPermissions(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,5 +160,33 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
     _sosVisible = false;
     ref.read(manualSOSProvider.notifier).state = false;
+  }
+
+  Future<void> _requestBackgroundPermissions(BuildContext context) async {
+    // Show dialog explaining why background permission needed
+    final granted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Background Monitoring'),
+        content: const Text(
+          'SafeNest needs to run in the background to monitor your health and send alerts even when the app is closed.\n\nPlease allow SafeNest to run in the background on the next screen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Skip'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+
+    if (granted == true) {
+      await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+    }
   }
 }
