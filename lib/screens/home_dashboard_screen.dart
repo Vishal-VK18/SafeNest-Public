@@ -1,4 +1,4 @@
-// lib/screens/home_dashboard_screen.dart
+﻿// lib/screens/home_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
@@ -34,7 +34,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Auto-show SOS modal on fall detection or manual trigger
     ref.listen(fallAlertActiveProvider, (prev, next) {
       if (next == true && prev != true) {
         _showSOSModal();
@@ -82,11 +81,10 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     if (_sosVisible) return;
     _sosVisible = true;
 
-    // Record the event
     final health = ref.read(healthDataProvider);
     final history = ref.read(safetyHistoryProvider.notifier);
     await history.recordFromHealth(
-      health, 
+      health,
       ref.read(manualSOSProvider) ? SafetyEventType.sos : SafetyEventType.fall,
     );
 

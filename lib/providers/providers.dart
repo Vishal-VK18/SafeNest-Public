@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_data_model.dart';
@@ -14,17 +14,17 @@ import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../models/temperature_entry.dart';
 
-// ─── BLE Service singleton ──────────────────────────────────────────────────
+// â”€â”€â”€ BLE Service singleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final bleServiceProvider = Provider<BleService>((_) => BleService.instance);
 
-// ─── Health data stream ──────────────────────────────────────────────────────
+// â”€â”€â”€ Health data stream â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /// Streams the latest parsed BLE health packet.
 final healthStreamProvider = StreamProvider<HealthDataModel>((ref) {
   final ble = ref.read(bleServiceProvider);
   return ble.healthStream;
 });
 
-/// Latest health snapshot — starts empty, updated only by real BLE data.
+/// Latest health snapshot â€” starts empty, updated only by real BLE data.
 final healthDataProvider = StateNotifierProvider<HealthDataNotifier, HealthDataModel>(
   (ref) => HealthDataNotifier(ref),
 );
@@ -41,7 +41,7 @@ class HealthDataNotifier extends StateNotifier<HealthDataModel> {
   void reset() => state = HealthDataModel.empty();
 }
 
-// ─── Device status stream ────────────────────────────────────────────────────
+// â”€â”€â”€ Device status stream â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final deviceStreamProvider = StreamProvider<DeviceStatusModel>((ref) {
   return ref.read(bleServiceProvider).deviceStream;
 });
@@ -65,7 +65,7 @@ class DeviceStatusNotifier extends StateNotifier<DeviceStatusModel> {
   }
 }
 
-// ─── BLE Scan state ──────────────────────────────────────────────────────────
+// â”€â”€â”€ BLE Scan state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /// True while a manual scan is in progress.
 final bleScanningProvider = StreamProvider<bool>((ref) {
   return ref.read(bleServiceProvider).scanningStream;
@@ -76,7 +76,7 @@ final bleScanResultsProvider = StreamProvider<List<ScanResult>>((ref) {
   return ref.read(bleServiceProvider).scanResultsStream;
 });
 
-// ─── Pregnancy ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Pregnancy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final pregnancyProvider =
     StateNotifierProvider<PregnancyNotifier, PregnancyModel>(
   (ref) => PregnancyNotifier(),
@@ -106,13 +106,13 @@ class PregnancyNotifier extends StateNotifier<PregnancyModel> {
   }
 }
 
-// ─── Fall alert state (for UI dismissal) ────────────────────────────────────
+// â”€â”€â”€ Fall alert state (for UI dismissal) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final fallAlertActiveProvider = StateProvider<bool>((ref) {
   final health = ref.watch(healthDataProvider);
   return health.fallDetected;
 });
 
-// ─── Caregivers ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Caregivers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final contactsProvider = StateNotifierProvider<ContactsNotifier, List<ContactModel>>((ref) {
   return ContactsNotifier();
 });
@@ -153,7 +153,7 @@ class ContactsNotifier extends StateNotifier<List<ContactModel>> {
   }
 }
 
-// ─── Hydration Logic Engine ──────────────────────────────────────────────────
+// â”€â”€â”€ Hydration Logic Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final hydrationProvider = StateNotifierProvider<HydrationNotifier, HydrationModel>((ref) {
   return HydrationNotifier();
 });
@@ -166,7 +166,7 @@ class HydrationNotifier extends StateNotifier<HydrationModel> {
     _checkMidnightReset();
   }
 
-  // ── Midnight reset ────────────────────────────────────────────────────────
+  // â”€â”€ Midnight reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void _checkMidnightReset() {
     final now  = DateTime.now();
     final last = state.lastUpdated;
@@ -186,10 +186,10 @@ class HydrationNotifier extends StateNotifier<HydrationModel> {
     }
   }
 
-  // ── Add water (backward-compat shim) ─────────────────────────────────────
+  // â”€â”€ Add water (backward-compat shim) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void addWater(double liters) => addEntry(liters);
 
-  // ── Add entry with timestamp for time-bucket grouping ────────────────────
+  // â”€â”€ Add entry with timestamp for time-bucket grouping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void addEntry(double liters) {
     _checkMidnightReset();
     final entry  = HydrationEntry(timestamp: DateTime.now(), liters: liters);
@@ -203,7 +203,7 @@ class HydrationNotifier extends StateNotifier<HydrationModel> {
     _save();
   }
 
-  // ── Reminder state ────────────────────────────────────────────────────────
+  // â”€â”€ Reminder state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void setReminder({required bool enabled, int? freqHours}) {
     state = state.copyWith(
       reminderEnabled:   enabled,
@@ -212,14 +212,14 @@ class HydrationNotifier extends StateNotifier<HydrationModel> {
     _save();
   }
 
-  // ── Persist ───────────────────────────────────────────────────────────────
+  // â”€â”€ Persist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void _save() {
     StorageService.setHydrationData(state.toJsonString());
   }
 }
 
 
-// ─── Sleep & Oxygen Logic Engine ──────────────────────────────────────────────
+// â”€â”€â”€ Sleep & Oxygen Logic Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final sleepOxygenProvider = StateNotifierProvider<SleepOxygenNotifier, SleepOxygenModel>((ref) {
   return SleepOxygenNotifier();
 });
@@ -268,7 +268,7 @@ class SleepOxygenNotifier extends StateNotifier<SleepOxygenModel> {
   }
 }
 
-// ─── Smart Appointment System ────────────────────────────────────────────────
+// â”€â”€â”€ Smart Appointment System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final appointmentProvider = StateNotifierProvider<AppointmentNotifier, List<AppointmentModel>>((ref) {
   return AppointmentNotifier();
 });
@@ -363,7 +363,7 @@ class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
 }
 
 
-// ─── Risk Scoring System ─────────────────────────────────────────────────────
+// â”€â”€â”€ Risk Scoring System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final riskScoreProvider = Provider<int>((ref) {
   int score = 0;
   
@@ -404,12 +404,12 @@ final riskScoreProvider = Provider<int>((ref) {
 
 final riskStatusProvider = Provider<String>((ref) {
   final score = ref.watch(riskScoreProvider);
-  if (score >= 3) return "High Risk – Alert Caregiver";
-  if (score >= 2) return "Mild Risk – Monitor Closely";
+  if (score >= 3) return "High Risk â€“ Alert Caregiver";
+  if (score >= 2) return "Mild Risk â€“ Monitor Closely";
   return "On Track";
 });
 
-// ─── Weekly Health Analytics Engine ──────────────────────────────────────────
+// â”€â”€â”€ Weekly Health Analytics Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final weeklyAnalyticsProvider = Provider<Map<String, dynamic>>((ref) {
   final hyd = ref.watch(hydrationProvider);
   final sleep = ref.watch(sleepOxygenProvider);
