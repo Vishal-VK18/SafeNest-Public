@@ -50,6 +50,9 @@ class NotificationService {
       priority:           Priority.max,
       fullScreenIntent:   true,
       category:           AndroidNotificationCategory.alarm,
+      playSound:          true,
+      enableVibration:    true,
+      visibility:         NotificationVisibility.public,
     );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
@@ -85,6 +88,12 @@ class NotificationService {
     id:    AppConstants.notifIdTemperature,
     title: '🌡️ High Body Temperature',
     body:  'Temperature is ${temp.toStringAsFixed(1)}°C — above 38°C threshold.',
+  );
+
+  static Future<void> showLowTemperature(double temp) => _show(
+    id:    AppConstants.notifIdLowTemperature,
+    title: '❄️ Low Body Temperature',
+    body:  'Temperature is ${temp.toStringAsFixed(1)}°C — below 35°C threshold.',
   );
 
   static Future<void> showDeviceDisconnected(String deviceName) => _show(

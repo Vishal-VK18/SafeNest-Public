@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,11 +12,33 @@ import '../widgets/connection_status_badge.dart';
 import '../widgets/battery_indicator.dart';
 import '../widgets/signal_bar.dart';
 
-class DeviceConnectionScreen extends ConsumerWidget {
+class DeviceConnectionScreen extends ConsumerStatefulWidget {
   const DeviceConnectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeviceConnectionScreen> createState() => _DeviceConnectionScreenState();
+}
+
+class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh every 2 seconds to pick up background BLE connection state
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final deviceStatus     = ref.watch(deviceStatusProvider);
     final health           = ref.watch(healthDataProvider);
     final btStateAsync     = ref.watch(bluetoothStateProvider);
@@ -113,8 +136,12 @@ class DeviceConnectionScreen extends ConsumerWidget {
                     type:    'WEARABLE',
                     name:    deviceStatus.watch.isConnected
                         ? deviceStatus.watch.name
-                        : 'Not Paired',
-                    status:  deviceStatus.watch.status,
+                        : FlutterBluePlus.connectedDevices.isNotEmpty
+                            ? FlutterBluePlus.connectedDevices.first.platformName
+                            : 'Not Paired',
+                    status:  FlutterBluePlus.connectedDevices.isNotEmpty
+                        ? ConnectionStatus.connected
+                        : deviceStatus.watch.status,
                     battery: deviceStatus.watch.isConnected ? health.watchBattery : 0,
                     signal:  _levelToSignal(deviceStatus.watch.signalLevel),
                     onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
@@ -131,14 +158,20 @@ class DeviceConnectionScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   _SimModuleCard(
-                    status:      deviceStatus.simUnit.status,
-                    name:        deviceStatus.simUnit.isConnected
-                        ? deviceStatus.simUnit.name
-                        : 'Not Paired',
-                    battery:     deviceStatus.simUnit.isConnected ? health.simBattery : 0,
-                    signal:      _levelToSignal(deviceStatus.simUnit.signalLevel),
-                    networkType: health.networkType,
-                    simSignal:   health.simSignal,
+                    status: health.simSignal > 0
+                        ? ConnectionStatus.connected
+                        : deviceStatus.simUnit.status,
+                    name: health.simSignal > 0
+                        ? 'SafeNest SIM'
+                        : deviceStatus.simUnit.isConnected
+                            ? deviceStatus.simUnit.name
+                            : 'Not Paired',
+                    battery: 0,
+                    signal: health.simSignal,
+                    networkType: health.networkType.isNotEmpty && health.networkType != 'N/A'
+                        ? health.networkType
+                        : '—',
+                    simSignal: health.simSignal,
                     onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
                   ),
                   const SizedBox(height: 28),
@@ -539,7 +572,28 @@ class _SimModuleCard extends StatelessWidget {
             _InfoChip(
               icon:  Icons.signal_cellular_alt,
               label: 'Signal',
-              value: SignalBar(level: simSignal),
+              value: Row(
+                children: [
+                  SignalBar(level: simSignal),
+                  const SizedBox(width: 8),
+                  Text(
+                    simSignal >= 4 ? 'Excellent'
+                        : simSignal >= 3 ? 'Good'
+                        : simSignal >= 2 ? 'Fair'
+                        : simSignal >= 1 ? 'Poor'
+                        : 'No Signal',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: simSignal >= 3
+                          ? AppColors.statusGreen
+                          : simSignal >= 1
+                              ? AppColors.alertOrange
+                              : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ] else ...[
             Container(

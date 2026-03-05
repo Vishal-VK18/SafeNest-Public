@@ -13,6 +13,7 @@ class HealthDataModel {
   final String networkType;  // "2G" | "3G" | "4G" | "LTE-M" | "N/A"
   final double gpsLat;
   final double gpsLng;
+  final int tempAlert;      // -1 low, 0 normal, 1 high
   final DateTime? lastSmsTime;
   final DateTime receivedAt;
 
@@ -27,6 +28,7 @@ class HealthDataModel {
     required this.networkType,
     required this.gpsLat,
     required this.gpsLng,
+    this.tempAlert = 0,
     this.lastSmsTime,
     required this.receivedAt,
   });
@@ -52,6 +54,7 @@ class HealthDataModel {
       networkType:   (json['network_type']   as String?)          ?? 'N/A',
       gpsLat:        (json['gps_lat']        as num?)?.toDouble() ?? 0.0,
       gpsLng:        (json['gps_lng']        as num?)?.toDouble() ?? 0.0,
+      tempAlert:     (json['temp_alert']     as num?)?.toInt()    ?? 0,
       lastSmsTime:   parsedSmsTime,
       receivedAt:    DateTime.now(),
     );
@@ -77,6 +80,7 @@ class HealthDataModel {
     'network_type':   networkType,
     'gps_lat':        gpsLat,
     'gps_lng':        gpsLng,
+    'temp_alert':     tempAlert,
     'last_sms_time':  lastSmsTime?.toIso8601String(),
   };
 
@@ -95,6 +99,7 @@ class HealthDataModel {
     gpsLat:        0.0,
     gpsLng:        0.0,
     receivedAt:    DateTime.now(),
+    tempAlert:     0,
   );
 
   // ─── Status helpers ──────────────────────────────────────────────────────────
@@ -145,6 +150,7 @@ class HealthDataModel {
     String? networkType,
     double? gpsLat,
     double? gpsLng,
+    int? tempAlert,
     DateTime? lastSmsTime,
     DateTime? receivedAt,
   }) => HealthDataModel(
@@ -158,6 +164,7 @@ class HealthDataModel {
     networkType:   networkType   ?? this.networkType,
     gpsLat:        gpsLat        ?? this.gpsLat,
     gpsLng:        gpsLng        ?? this.gpsLng,
+    tempAlert:     tempAlert     ?? this.tempAlert,
     lastSmsTime:   lastSmsTime   ?? this.lastSmsTime,
     receivedAt:    receivedAt    ?? this.receivedAt,
   );

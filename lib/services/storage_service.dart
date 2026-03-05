@@ -141,4 +141,10 @@ class StorageService {
     if (list.length > 50) list.removeLast();
     await _settings.put(AppConstants.keySafetyHistory, list);
   }
+
+  static bool getBatteryPermissionAsked() =>
+      (_settings.get('battery_permission_asked') as bool?) ?? false;
+
+  static Future<void> setBatteryPermissionAsked(bool val) =>
+      _settings.put('battery_permission_asked', val);
 }

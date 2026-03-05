@@ -12,6 +12,7 @@ import '../models/safety_event_model.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
+import '../models/temperature_entry.dart';
 
 // ─── BLE Service singleton ──────────────────────────────────────────────────
 final bleServiceProvider = Provider<BleService>((_) => BleService.instance);
@@ -482,3 +483,39 @@ final safetyHistoryProvider = StateNotifierProvider<SafetyHistoryNotifier, List<
 
 // Used to trigger SOS manually from UI
 final manualSOSProvider = StateProvider<bool>((ref) => false);
+
+// ─── Temperature Log ─────────────────────────────────────────────────────────
+/// Stores up to 100 recent temperature readings, newest first.
+/// Auto-records an entry every time a non-zero temperature arrives from BLE.
+final temperatureLogProvider =
+    StateNotifierProvider<TemperatureLogNotifier, List<TemperatureEntry>>((ref) {
+  return TemperatureLogNotifier(ref);
+});
+
+class TemperatureLogNotifier extends StateNotifier<List<TemperatureEntry>> {
+  static const int _maxEntries = 100;
+  final Ref _ref;
+  double _lastRecordedTemp = 0.0;
+
+  TemperatureLogNotifier(this._ref) : super([]) {
+    // Listen to live BLE health stream and auto-record temperature changes
+    _ref.listen<HealthDataModel>(healthDataProvider, (prev, next) {
+      if (next.temperature > 0 && next.temperature != _lastRecordedTemp) {
+        _lastRecordedTemp = next.temperature;
+        _addEntry(TemperatureEntry(
+          value: next.temperature,
+          timestamp: next.receivedAt,
+        ));
+      }
+    });
+  }
+
+  void _addEntry(TemperatureEntry entry) {
+    final updated = [entry, ...state];
+    if (updated.length > _maxEntries) {
+      state = updated.sublist(0, _maxEntries);
+    } else {
+      state = updated;
+    }
+  }
+}

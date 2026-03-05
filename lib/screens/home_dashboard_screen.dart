@@ -1,9 +1,9 @@
 // lib/screens/home_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../providers/providers.dart';
 import '../utils/app_theme.dart';
+import '../widgets/bottom_nav_bar.dart';
 import 'dashboard_tab.dart';
 import 'journey_tab.dart';
 import 'device_connection_screen.dart';
@@ -11,6 +11,7 @@ import 'emergency_alert_screen.dart';
 import 'profile_screen.dart';
 import 'safety_event_history_screen.dart';
 import '../models/safety_event_model.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -22,6 +23,14 @@ class HomeDashboardScreen extends ConsumerStatefulWidget {
 class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   int _selectedTab = 0;
   bool _sosVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestBackgroundPermissions(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,73 +62,17 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 const ProfileScreen(),
               ],
             ),
-            // Bottom nav
+            // Animated bottom navigation bar
             Positioned(
               left: 0, right: 0, bottom: 0,
-              child: _buildBottomNav(),
+              child: SafeNestBottomNavBar(
+                selectedIndex: _selectedTab,
+                onTabChange: (index, label) {
+                  setState(() => _selectedTab = index);
+                },
+              ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  // ─── Bottom Navigation ─────────────────────────────────────────────────────
-  Widget _buildBottomNav() {
-    const tabs = [
-      (Icons.grid_view_rounded,  Icons.grid_view_outlined,   'DASHBOARD'),
-      (Icons.auto_graph_rounded, Icons.auto_graph_outlined,  'JOURNEY'),
-      (Icons.watch_rounded,      Icons.watch_outlined,       'DEVICES'),
-      (Icons.history_rounded,    Icons.history_outlined,     'HISTORY'),
-      (Icons.person_rounded,     Icons.person_outline,       'PROFILE'),
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        border: const Border(top: BorderSide(color: Color(0xFFF0F0F0), width: 1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20, offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(tabs.length, (i) {
-              final selected = _selectedTab == i;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedTab = i),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        selected ? tabs[i].$1 : tabs[i].$2,
-                        color: selected ? AppColors.primaryDark : Colors.grey[400],
-                        size: 24,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tabs[i].$3,
-                        style: GoogleFonts.inter(
-                          fontSize: 8, fontWeight: FontWeight.w700,
-                          color: selected ? AppColors.primaryDark : Colors.grey[400],
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
         ),
       ),
     );
@@ -147,5 +100,33 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
     _sosVisible = false;
     ref.read(manualSOSProvider.notifier).state = false;
+  }
+
+  Future<void> _requestBackgroundPermissions(BuildContext context) async {
+    // Show dialog explaining why background permission needed
+    final granted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Background Monitoring'),
+        content: const Text(
+          'SafeNest needs to run in the background to monitor your health and send alerts even when the app is closed.\n\nPlease allow SafeNest to run in the background on the next screen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Skip'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+
+    if (granted == true) {
+      await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+    }
   }
 }
