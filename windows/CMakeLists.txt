@@ -2,6 +2,10 @@
 cmake_minimum_required(VERSION 3.14)
 project(safenest_app LANGUAGES CXX)
 
+if(MSVC)
+  add_compile_options(/FS)
+endif()
+
 set(BINARY_NAME "safenest_app")
 
 cmake_policy(SET CMP0063 NEW)

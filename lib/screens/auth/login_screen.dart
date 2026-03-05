@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../utils/blush_theme.dart';
 import '../../services/auth_service.dart';
 import 'create_account_screen.dart';
 import 'otp_screen.dart';
@@ -127,9 +128,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgLight,
-      body: SafeArea(
-        child: Center(
+      body: Stack(
+        children: [
+          // ── Blush gradient background
+          Positioned.fill(
+            child: Container(decoration: const BoxDecoration(gradient: BlushGradients.background)),
+          ),
+          SafeArea(
+            child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
@@ -439,12 +445,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+              ), // Column
+            ), // ConstrainedBox
+          ), // SingleChildScrollView
+        ), // Close Center
+      ), // Close SafeArea
+        ], // Close Stack children
+      ), // Close Stack
+    ); // Close Scaffold
   }
 
   Widget _fieldLabel(String label) {

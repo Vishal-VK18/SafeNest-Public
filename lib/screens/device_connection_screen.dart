@@ -1,3 +1,4 @@
+// lib/screens/device_connection_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,23 +8,18 @@ import '../providers/providers.dart';
 import '../providers/system_providers.dart';
 import '../models/device_status_model.dart';
 import '../utils/app_theme.dart';
-import '../widgets/connection_status_badge.dart';
-import '../widgets/battery_indicator.dart';
-import '../widgets/signal_bar.dart';
+import '../utils/blush_theme.dart';
 
-class DeviceConnectionScreen extends ConsumerWidget {
+class DeviceConnectionScreen extends ConsumerStatefulWidget {
   const DeviceConnectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final deviceStatus     = ref.watch(deviceStatusProvider);
-    final health           = ref.watch(healthDataProvider);
-    final btStateAsync     = ref.watch(bluetoothStateProvider);
-    final networkNameAsync = ref.watch(networkNameProvider);
+  ConsumerState<DeviceConnectionScreen> createState() => _DeviceConnectionScreenState();
+}
 
-    final isBluetoothOn = btStateAsync.value == BluetoothAdapterState.on;
-    final networkName   = networkNameAsync.value ?? 'Checking...';
-
+class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen> {
+  @override
+  Widget build(BuildContext context) {
     if (!Platform.isAndroid && !Platform.isIOS) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -43,720 +39,394 @@ class DeviceConnectionScreen extends ConsumerWidget {
       );
     }
 
+    final deviceStatus     = ref.watch(deviceStatusProvider);
+    final btStateAsync     = ref.watch(bluetoothStateProvider);
+    final networkNameAsync = ref.watch(networkNameProvider);
+
+    final isBluetoothOn = btStateAsync.value == BluetoothAdapterState.on;
+    final networkName   = networkNameAsync.value ?? 'Checking...';
+    final isWifiOn      = networkName != 'Disconnected' && networkName != 'Checking...';
+
+    // Gradient Background from blush theme
+    final gradientDecoration = BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [const Color(0xFFFFC09D), const Color(0xFFFFCACB)],
+      ),
+    );
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Background decorative blobs
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.22,
-              right: -80,
+      backgroundColor: const Color(0xFFFFFAF8), // creamy
+      body: Stack(
+        children: [
+          // Background
+          Positioned.fill(
+            child: Container(
+              decoration: gradientDecoration,
               child: Container(
-                width: 280, height: 280,
-                decoration: BoxDecoration(
-                  color: AppColors.softLilac.withOpacity(0.4),
-                  shape: BoxShape.circle,
-                ),
+                color: Colors.white.withOpacity(0.25), // Backdrop blur equivalent
               ),
             ),
-            Positioned(
-              bottom: MediaQuery.of(context).size.height * 0.28,
-              left: -80,
-              child: Container(
-                width: 280, height: 280,
-                decoration: BoxDecoration(
-                  color: AppColors.softLilac.withOpacity(0.4),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 180),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  const SizedBox(height: 16),
-                  Row(
+          ),
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Device Connectivity',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 18, fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C1C1E),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () => Navigator.maybePop(context),
+                          child: Container(
+                            width: 40, height: 40,
+                            alignment: Alignment.centerLeft,
+                            child: const Icon(Icons.arrow_back_ios, color: Color(0xFF181818), size: 20),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 48),
+                      Text(
+                        'Device Hub',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF181818).withOpacity(0.7),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                ),
+                
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 24, bottom: 24),
+                    child: Text(
+                      'Devices',
+                      style: GoogleFonts.inter(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF181818),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ),
 
-                  // ── WEARABLE SECTION ─────────────────────────────────────
-                  Text(
-                    'WEARABLE DEVICE',
-                    style: GoogleFonts.inter(
-                      fontSize: 10, fontWeight: FontWeight.w700,
-                      color: Colors.grey[400], letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _DeviceCard(
-                    icon:    Icons.watch,
-                    type:    'WEARABLE',
-                    name:    deviceStatus.watch.isConnected
-                        ? deviceStatus.watch.name
-                        : 'Not Paired',
-                    status:  deviceStatus.watch.status,
-                    battery: deviceStatus.watch.isConnected ? health.watchBattery : 0,
-                    signal:  _levelToSignal(deviceStatus.watch.signalLevel),
-                    onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // ── SIM MODULE SECTION ───────────────────────────────────
-                  Text(
-                    'SIM MODULE',
-                    style: GoogleFonts.inter(
-                      fontSize: 10, fontWeight: FontWeight.w700,
-                      color: Colors.grey[400], letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _SimModuleCard(
-                    status:      deviceStatus.simUnit.status,
-                    name:        deviceStatus.simUnit.isConnected
-                        ? deviceStatus.simUnit.name
-                        : 'Not Paired',
-                    battery:     deviceStatus.simUnit.isConnected ? health.simBattery : 0,
-                    signal:      _levelToSignal(deviceStatus.simUnit.signalLevel),
-                    networkType: health.networkType,
-                    simSignal:   health.simSignal,
-                    onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // ── GLOBAL CONNECTIVITY (Real Hardware) ─────────────────
-                  Text(
-                    'GLOBAL CONNECTIVITY',
-                    style: GoogleFonts.inter(
-                      fontSize: 10, fontWeight: FontWeight.w700,
-                      color: Colors.grey[400], letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color:        AppColors.softLilac,
-                      borderRadius: BorderRadius.circular(20),
-                      border:       Border.all(color: Colors.white.withOpacity(0.5)),
-                    ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(28, 0, 28, 120),
                     child: Column(
                       children: [
-                        _SystemToggleRow(
-                          icon:    Icons.bluetooth,
-                          label:   'Bluetooth',
-                          status:  isBluetoothOn ? 'Enabled' : 'Disabled',
-                          toggled: isBluetoothOn,
-                          onToggle: (v) => ref.read(systemServiceProvider).turnOnBluetooth(),
-                          divider: true,
+                        // Watch Card
+                        _buildDeviceCard(
+                          type: 'Wearable',
+                          icon: Icons.watch_rounded,
+                          status: deviceStatus.watch.status,
+                          onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
                         ),
-                        _SystemToggleRow(
-                          icon:    Icons.wifi,
-                          label:   'WiFi',
-                          status:  networkName,
-                          toggled: networkName != 'Disconnected' && networkName != 'Checking...',
-                          onToggle: (v) => ref.read(systemServiceProvider).openWiFiSettings(),
+                        const SizedBox(height: 24),
+
+                        // SIM Card
+                        _buildDeviceCard(
+                          type: 'SIM Module',
+                          icon: Icons.sim_card_rounded,
+                          status: deviceStatus.simUnit.status,
+                          onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // System Toggles
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white.withOpacity(0.5)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 24,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              _buildToggleRow(
+                                title: 'Bluetooth',
+                                subtitle: isBluetoothOn ? 'Enabled' : 'Disabled',
+                                subtitleColor: isBluetoothOn ? Colors.green[500]! : Colors.grey[500]!,
+                                icon: Icons.bluetooth,
+                                iconColor: Colors.blue[500]!,
+                                iconBg: Colors.blue[50]!,
+                                value: isBluetoothOn,
+                                onChanged: (val) => ref.read(systemServiceProvider).turnOnBluetooth(),
+                                showBorder: true,
+                              ),
+                              _buildToggleRow(
+                                title: 'WiFi',
+                                subtitle: isWifiOn ? 'Connected to WiFi' : 'Disconnected',
+                                subtitleColor: isWifiOn ? Colors.green[500]! : Colors.grey[500]!,
+                                icon: Icons.wifi,
+                                iconColor: Colors.indigo[500]!,
+                                iconBg: Colors.indigo[50]!,
+                                value: isWifiOn,
+                                onChanged: (val) => ref.read(systemServiceProvider).openWiFiSettings(),
+                                showBorder: false,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceCard({
+    required String type,
+    required IconData icon,
+    required ConnectionStatus status,
+    required VoidCallback onReconnect,
+  }) {
+    final isConnected = status == ConnectionStatus.connected;
+    final isConnecting = status == ConnectionStatus.connecting || status == ConnectionStatus.scanning;
+
+    String statusText = 'Disconnected';
+    Color statusColor = Colors.red[500]!;
+    Color statusBg = Colors.red[50]!;
+    Color statusBorder = Colors.red[100]!;
+
+    if (isConnected) {
+      statusText = 'Connected';
+      statusColor = Colors.green[500]!;
+      statusBg = Colors.green[50]!;
+      statusBorder = Colors.green[100]!;
+    } else if (isConnecting) {
+      statusText = 'Connecting...';
+      statusColor = Colors.orange[500]!;
+      statusBg = Colors.orange[50]!;
+      statusBorder = Colors.orange[100]!;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start, // Align to top
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFC09D).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(icon, color: const Color(0xFFFFC09D), size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        type.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                          color: const Color(0xFF181818).withOpacity(0.3),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isConnected ? 'Active Pair' : 'Not Paired',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF181818),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: statusBorder),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6, height: 6,
+                      decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      statusText.toUpperCase(),
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          if (!isConnected) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.grey[50], // Very light gray from UI
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    type == 'SIM Module' 
+                        ? 'SIM module not connected.\nEnsure it is powered on and nearby.'
+                        : 'Not Connected\nTap "Reconnect" to search.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF181818).withOpacity(0.4), height: 1.5),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: isConnecting ? null : onReconnect,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: isConnecting ? null : const LinearGradient(colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)]),
+                        color: isConnecting ? Colors.grey[300] : null,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: isConnecting ? null : [
+                          BoxShadow(color: const Color(0xFFFFC09D).withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (isConnecting)
+                            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          else
+                            const Icon(Icons.refresh, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            isConnecting ? 'Connecting...' : 'Reconnect',
+                            style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            // ── Pair / Scan Button ────────────────────────────────────────
-            Positioned(
-              left: 24, right: 24, bottom: 100,
-              child: _PairButton(isEnabled: isBluetoothOn),
-            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  int _levelToSignal(int level) {
-    if (level >= 90) return 4;
-    if (level >= 60) return 3;
-    if (level >= 30) return 2;
-    if (level > 0)   return 1;
-    return 0;
-  }
-}
-
-// ─── System Toggle Row ────────────────────────────────────────────────────────
-class _SystemToggleRow extends StatelessWidget {
-  final IconData icon;
-  final String   label;
-  final String   status;
-  final bool     toggled;
-  final Function(bool) onToggle;
-  final bool     divider;
-
-  const _SystemToggleRow({
-    required this.icon,
-    required this.label,
-    required this.status,
-    required this.toggled,
-    required this.onToggle,
-    this.divider = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
+  Widget _buildToggleRow({
+    required String title,
+    required String subtitle,
+    required Color subtitleColor,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required bool showBorder,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        border: showBorder ? Border(bottom: BorderSide(color: Colors.grey[100]!)) : null,
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
             children: [
               Container(
                 width: 40, height: 40,
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: Icon(icon, color: AppColors.deepLavender, size: 20),
+                decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1C1C1E),
-                      ),
-                    ),
-                    Text(
-                      status,
-                      style: GoogleFonts.inter(
-                        fontSize: 11, color: toggled ? AppColors.statusGreen : Colors.grey,
-                        fontWeight: toggled ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value:     toggled,
-                onChanged: onToggle,
-                activeThumbColor: AppColors.primary,
-              ),
-            ],
-          ),
-        ),
-        if (divider)
-          Divider(height: 1, color: Colors.white.withOpacity(0.5)),
-      ],
-    );
-  }
-}
-
-// ─── Device Card (Watch) ──────────────────────────────────────────────────────
-class _DeviceCard extends StatelessWidget {
-  final IconData         icon;
-  final String           type;
-  final String           name;
-  final ConnectionStatus status;
-  final int              battery;
-  final int              signal;
-  final VoidCallback     onReconnect;
-
-  const _DeviceCard({
-    required this.icon,
-    required this.type,
-    required this.name,
-    required this.status,
-    required this.battery,
-    required this.signal,
-    required this.onReconnect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isConnected  = status == ConnectionStatus.connected;
-    final isScanning   = status == ConnectionStatus.scanning;
-    final isConnecting = status == ConnectionStatus.connecting;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color:        AppColors.softLilac,
-        borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: Colors.white.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color:      Colors.black.withOpacity(0.04),
-            blurRadius: 20, offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(
-                  color:        Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Icon(icon, color: AppColors.deepLavender, size: 26),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      type,
-                      style: GoogleFonts.inter(
-                        fontSize: 9, fontWeight: FontWeight.w700,
-                        color: Colors.grey[500], letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      name,
-                      style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1C1C1E),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ConnectionStatusBadge(status: status),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          if (isScanning)
-            _StateRow(
-              icon: Icons.bluetooth_searching,
-              message: 'Scanning for devices…',
-              showSpinner: true,
-            )
-          else if (isConnecting)
-            _StateRow(
-              icon: Icons.bluetooth_connected,
-              message: 'Connecting…',
-              showSpinner: true,
-            )
-          else if (isConnected) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: _InfoChip(
-                    icon:  Icons.bar_chart,
-                    label: 'Signal',
-                    value: SignalBar(level: signal),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _InfoChip(
-                    icon:  Icons.battery_full,
-                    label: 'Battery',
-                    value: battery > 0
-                        ? BatteryIndicator(percent: battery)
-                        : _BatteryUnknown(),
-                  ),
-                ),
-              ],
-            ),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color:        Colors.white.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(14),
-                border:       Border.all(
-                  color: AppColors.primary.withOpacity(0.4),
-                ),
-              ),
-              child: Column(
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Not Connected\nTap "Pair New Device" to search.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 12, color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: onReconnect,
-                    icon:  const Icon(Icons.refresh, size: 18),
-                    label: const Text('Reconnect'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                    ),
-                  ),
+                  Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF181818))),
+                  Text(subtitle, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: subtitleColor)),
                 ],
               ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ─── SIM Module Card ────────────────────────────────────────────────────────
-class _SimModuleCard extends StatelessWidget {
-  final ConnectionStatus status;
-  final String           name;
-  final int              battery;
-  final int              signal;
-  final String           networkType;
-  final int              simSignal;
-  final VoidCallback     onReconnect;
-
-  const _SimModuleCard({
-    required this.status,
-    required this.name,
-    required this.battery,
-    required this.signal,
-    required this.networkType,
-    required this.simSignal,
-    required this.onReconnect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isConnected  = status == ConnectionStatus.connected;
-    final isScanning   = status == ConnectionStatus.scanning;
-    final isConnecting = status == ConnectionStatus.connecting;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color:        Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: AppColors.primary.withOpacity(0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 14, offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(Icons.sim_card, color: AppColors.primary, size: 26),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SIM MODULE',
-                      style: GoogleFonts.inter(
-                        fontSize: 9, fontWeight: FontWeight.w700,
-                        color: Colors.grey[500], letterSpacing: 1.2,
-                      )),
-                    Text(name,
-                      style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1C1C1E),
-                      )),
-                  ],
-                ),
-              ),
-              ConnectionStatusBadge(status: status),
             ],
           ),
-          const SizedBox(height: 14),
-
-          if (isScanning || isConnecting)
-            _StateRow(
-              icon: Icons.signal_cellular_alt,
-              message: isScanning ? 'Searching for SIM module…' : 'Connecting to SIM…',
-              showSpinner: true,
-            )
-          else if (isConnected) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: _InfoChip(
-                    icon:  Icons.network_cell,
-                    label: 'Network',
-                    value: Text(networkType,
-                      style: GoogleFonts.inter(
-                        fontSize: 14, fontWeight: FontWeight.w700,
-                        color: AppColors.lavenderText,
-                      )),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _InfoChip(
-                    icon:  Icons.battery_full,
-                    label: 'Battery',
-                    value: battery > 0
-                        ? BatteryIndicator(percent: battery)
-                        : _BatteryUnknown(),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _InfoChip(
-              icon:  Icons.signal_cellular_alt,
-              label: 'Signal',
-              value: SignalBar(level: simSignal),
-            ),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(14),
+          
+          GestureDetector(
+            onTap: () => onChanged(!value),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 44,
+              height: 24,
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color:        AppColors.softLilac.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(14),
+                color: value ? const Color(0xFFFFC09D) : Colors.grey[200],
+                borderRadius: BorderRadius.circular(999),
               ),
-              child: Column(
-                children: [
-                  Text(
-                    'SIM module not connected.\nEnsure it is powered on and nearby.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 200),
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: onReconnect,
-                    icon:  const Icon(Icons.refresh, size: 18),
-                    label: const Text('Reconnect'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Pair Button ─────────────────────────────────────────────────────────────
-class _PairButton extends ConsumerWidget {
-  final bool isEnabled;
-  const _PairButton({required this.isEnabled});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        if (!isEnabled)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: AppColors.alertOrange, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  'Enable Bluetooth to scan',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.alertOrange, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
           ),
-        ElevatedButton.icon(
-          onPressed: isEnabled ? () => _openScanSheet(context, ref) : null,
-          icon:  const Icon(Icons.add_circle_outline),
-          label: const Text('Pair New Device'),
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size.fromHeight(54),
-            backgroundColor: isEnabled ? AppColors.primary : Colors.grey[300],
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _openScanSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ScanSheet(
-        onDeviceSelected: (device) async {
-          Navigator.pop(context);
-          await ref.read(bleServiceProvider).connectToDevice(device);
-        },
-      ),
-    );
-    ref.read(bleServiceProvider).startManualScan();
-  }
-}
-
-// ─── Scan Sheet ───────────────────────────────────────────────────────────────
-class _ScanSheet extends ConsumerWidget {
-  final Future<void> Function(BluetoothDevice) onDeviceSelected;
-  const _ScanSheet({required this.onDeviceSelected});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scanResultsAsync = ref.watch(bleScanResultsProvider);
-    final scanningAsync    = ref.watch(bleScanningProvider);
-    final isScanning       = scanningAsync.value ?? true;
-    final results          = scanResultsAsync.value ?? [];
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(2))),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Text('Available Devices', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF1C1C1E))),
-              const Spacer(),
-              if (isScanning)
-                Row(
-                  children: [
-                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
-                    const SizedBox(width: 8),
-                    Text('Scanning…', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary)),
-                  ],
-                )
-              else
-                TextButton.icon(
-                  onPressed: () => ref.read(bleServiceProvider).startManualScan(),
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('Rescan'),
-                  style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: results.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.bluetooth_searching, size: 48, color: Colors.grey[300]),
-                        const SizedBox(height: 12),
-                        Text(isScanning ? 'Searching...' : 'No devices found', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[400])),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: results.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final r = results[i];
-                      return ListTile(
-                        leading: CircleAvatar(backgroundColor: AppColors.softLilac, child: const Icon(Icons.bluetooth, color: AppColors.primary, size: 20)),
-                        title: Text(r.device.platformName.isNotEmpty ? r.device.platformName : 'Unknown', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
-                        subtitle: Text('${r.device.remoteId.str} · ${r.rssi} dBm', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
-                        trailing: ElevatedButton(
-                          onPressed: () => onDeviceSelected(r.device),
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: const StadiumBorder(), minimumSize: const Size(0, 36)),
-                          child: const Text('Connect'),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Shared UI Helpers ───────────────────────────────────────────────────────
-class _StateRow extends StatelessWidget {
-  final IconData icon;
-  final String   message;
-  final bool     showSpinner;
-  const _StateRow({required this.icon, required this.message, this.showSpinner = false});
-  @override Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.6), borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        children: [
-          if (showSpinner) SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-          else Icon(icon, color: AppColors.primary, size: 18),
-          const SizedBox(width: 10),
-          Text(message, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700])),
-        ],
-      ),
-    );
-  }
-}
-
-class _BatteryUnknown extends StatelessWidget {
-  @override Widget build(BuildContext context) => Text('—', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.grey[400]));
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String   label;
-  final Widget   value;
-  const _InfoChip({required this.icon, required this.label, required this.value});
-  @override Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.6), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label.toUpperCase(), style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.grey[500], letterSpacing: 1)),
-          const SizedBox(height: 4),
-          value,
         ],
       ),
     );

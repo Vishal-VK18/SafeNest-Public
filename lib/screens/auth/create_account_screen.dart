@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../utils/blush_theme.dart';
 import '../../providers/providers.dart';
 import '../../services/auth_service.dart';
 
@@ -166,9 +167,14 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgLight,
-      body: SafeArea(
-        child: Column(
+      body: Stack(
+        children: [
+          // ── Blush gradient background
+          Positioned.fill(
+            child: Container(decoration: const BoxDecoration(gradient: BlushGradients.background)),
+          ),
+          SafeArea(
+            child: Column(
           children: [
             // ── Top navigation bar ─────────────────────────────────────────
             Container(
@@ -679,9 +685,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
+        ), // Close Column
+      ), // Close SafeArea
+        ], // Close Stack children
+      ), // Close Stack
+    ); // Close Scaffold
   }
 
   // ─── Component helpers ────────────────────────────────────────────────────

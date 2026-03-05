@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../utils/app_theme.dart';
 import '../providers/providers.dart';
 import '../models/contact_model.dart';
 
@@ -51,22 +50,32 @@ class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
   void _saveContact() {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
-    
+
     if (name.isEmpty || phone.isEmpty || _selectedRelationship == null) {
-      // Basic validation: Could show snackbar here
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please fill in all fields.',
+            style: GoogleFonts.inter(fontSize: 14),
+          ),
+          backgroundColor: const Color(0xFF181818),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
       return;
     }
 
     if (widget.initialContact != null) {
       ref.read(contactsProvider.notifier).updateContactDetails(
-        widget.initialContact!.id, 
-        name, 
-        phone, 
-        _selectedRelationship!
+        widget.initialContact!.id,
+        name,
+        phone,
+        _selectedRelationship!,
       );
     } else {
       final newContact = ContactModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(), // generate unique ID
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
         phoneNumber: phone,
         relationship: _selectedRelationship!,
@@ -80,28 +89,18 @@ class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEdit = widget.initialContact != null;
 
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom, // Handle keyboard
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF18181B) : Colors.white, // zinc-900 / white
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-          border: Border(
-            top: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 24,
-              offset: const Offset(0, -8),
-            ),
-          ],
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
-        padding: const EdgeInsets.fromLTRB(32, 12, 32, 40),
+        padding: const EdgeInsets.fromLTRB(28, 12, 28, 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,114 +108,163 @@ class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
             // Handle bar
             Center(
               child: Container(
-                width: 48,
-                height: 6,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[700] : Colors.grey[300],
-                  borderRadius: BorderRadius.circular(3),
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
-            // Header
-            Text(
-              widget.initialContact != null ? 'Edit Contact' : 'Add New Contact',
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-              ),
+            // Header row with icon
+            Row(
+              children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC09D).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    isEdit ? Icons.edit : Icons.person_add,
+                    color: const Color(0xFFFFC09D),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEdit ? 'Edit Contact' : 'Add New Contact',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF181818),
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      isEdit
+                          ? 'Update emergency contact details.'
+                          : 'This person will be alerted in emergencies.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF181818).withOpacity(0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              widget.initialContact != null 
-                  ? 'Update emergency contact details.' 
-                  : 'This person will be alerted in emergencies.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
-            // Form Fields
-            _buildInputField(
-              label: 'FULL NAME',
-              child: TextField(
-                controller: _nameController,
-                textCapitalization: TextCapitalization.words,
-                style: GoogleFonts.inter(fontSize: 16),
-                decoration: _inputDecoration(isDark, hintText: 'e.g. John Doe'),
-              ),
+            // Full Name field
+            _buildLabel('FULL NAME'),
+            const SizedBox(height: 8),
+            _buildTextField(
+              controller: _nameController,
+              hintText: 'e.g. John Doe',
+              keyboardType: TextInputType.name,
+              textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            _buildInputField(
-              label: 'PHONE NUMBER',
-              child: TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                style: GoogleFonts.inter(fontSize: 16),
-                decoration: _inputDecoration(
-                  isDark,
-                  hintText: '+1 (555) 000-0000',
-                  prefixIcon: const Icon(Icons.call_outlined, color: Colors.grey),
+            // Phone Number field
+            _buildLabel('PHONE NUMBER'),
+            const SizedBox(height: 8),
+            _buildTextField(
+              controller: _phoneController,
+              hintText: '+1 (555) 000-0000',
+              keyboardType: TextInputType.phone,
+              prefixIcon: Icon(Icons.call_outlined, color: const Color(0xFFFFC09D), size: 20),
+            ),
+            const SizedBox(height: 20),
+
+            // Relationship dropdown
+            _buildLabel('RELATIONSHIP'),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFAF8),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFFC09D).withOpacity(0.3), width: 1.5),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedRelationship,
+                  isExpanded: true,
+                  dropdownColor: Colors.white,
+                  items: _relationships.map((rel) {
+                    return DropdownMenuItem(
+                      value: rel,
+                      child: Text(rel, style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF181818))),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => _selectedRelationship = val),
+                  icon: Icon(Icons.expand_more, color: const Color(0xFF181818).withOpacity(0.4)),
+                  hint: Text(
+                    'Select Relationship',
+                    style: GoogleFonts.inter(color: const Color(0xFF181818).withOpacity(0.3), fontSize: 15),
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
-            _buildInputField(
-              label: 'RELATIONSHIP',
-              child: DropdownButtonFormField<String>(
-                value: _selectedRelationship,
-                items: _relationships.map((rel) {
-                  return DropdownMenuItem(
-                    value: rel,
-                    child: Text(rel, style: GoogleFonts.inter(fontSize: 16)),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedRelationship = val),
-                icon: const Icon(Icons.expand_more, color: Colors.grey),
-                decoration: _inputDecoration(isDark, hintText: 'Select Relationship'),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Actions
-            ElevatedButton(
-              onPressed: _saveContact,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFBDB0D0), // Primary-muted
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
+            // Save button — gradient to match Blush theme
+            GestureDetector(
+              onTap: _saveContact,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+                  ),
                   borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFC09D).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                elevation: 8,
-                shadowColor: AppColors.primary.withOpacity(0.4),
-              ),
-              child: Text(
-                widget.initialContact != null ? 'Update Contact' : 'Save Contact',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                child: Center(
+                  child: Text(
+                    isEdit ? 'Update Contact' : 'Save Contact',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[500],
+            const SizedBox(height: 12),
+
+            // Cancel
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Center(
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF181818).withOpacity(0.4),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -226,42 +274,52 @@ class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
     );
   }
 
-  Widget _buildInputField({required String label, required Widget child}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-              color: Colors.grey[400],
-            ),
-          ),
-        ),
-        child,
-      ],
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.5,
+        color: const Color(0xFF181818).withOpacity(0.35),
+      ),
     );
   }
 
-  InputDecoration _inputDecoration(bool isDark, {required String hintText, Widget? prefixIcon}) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: GoogleFonts.inter(color: isDark ? Colors.grey[700] : Colors.grey[400]),
-      filled: true,
-      fillColor: isDark ? Colors.grey[800]!.withOpacity(0.5) : Colors.grey[50],
-      prefixIcon: prefixIcon,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      enabledBorder: OutlineInputBorder(
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    TextInputType keyboardType = TextInputType.text,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    Widget? prefixIcon,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFAF8),
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: AppColors.primary.withOpacity(0.2), width: 2),
+        border: Border.all(color: const Color(0xFFFFC09D).withOpacity(0.3), width: 1.5),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        textCapitalization: textCapitalization,
+        style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF181818)),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: GoogleFonts.inter(
+            fontSize: 15,
+            color: const Color(0xFF181818).withOpacity(0.3),
+          ),
+          prefixIcon: prefixIcon != null
+              ? Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 8),
+                  child: prefixIcon,
+                )
+              : null,
+          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          border: InputBorder.none,
+        ),
       ),
     );
   }

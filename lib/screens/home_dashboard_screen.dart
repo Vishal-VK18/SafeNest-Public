@@ -52,8 +52,9 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 const ProfileScreen(),
               ],
             ),
+            // Floating pill nav bar
             Positioned(
-              left: 0, right: 0, bottom: 0,
+              left: 0, right: 0, bottom: 16,
               child: _buildBottomNav(),
             ),
           ],
@@ -63,60 +64,67 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   }
 
   Widget _buildBottomNav() {
-    const tabs = [
-      (Icons.grid_view_rounded,  Icons.grid_view_outlined,   'DASHBOARD'),
-      (Icons.auto_graph_rounded, Icons.auto_graph_outlined,  'JOURNEY'),
-      (Icons.watch_rounded,      Icons.watch_outlined,       'DEVICES'),
-      (Icons.history_rounded,    Icons.history_outlined,     'HISTORY'),
-      (Icons.person_rounded,     Icons.person_outline,       'PROFILE'),
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        border: const Border(top: BorderSide(color: Color(0xFFF0F0F0), width: 1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20, offset: const Offset(0, -4),
-          ),
-        ],
+    return Center(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxWidth: 380),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFC09D).withOpacity(0.2), // shadow-peach/20
+              blurRadius: 24, // shadow-2xl equivalent ish
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildNavItem(0, Icons.grid_view_rounded, 'Dashboard'),
+            _buildNavItem(1, Icons.auto_graph_rounded, 'Journey'),
+            _buildNavItem(2, Icons.watch_rounded, 'Devices'),
+            _buildNavItem(3, Icons.notifications_rounded, 'Alerts'),
+            _buildNavItem(4, Icons.person_rounded, 'Profile'),
+          ],
+        ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(tabs.length, (i) {
-              final selected = _selectedTab == i;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedTab = i),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        selected ? tabs[i].$1 : tabs[i].$2,
-                        color: selected ? AppColors.primaryDark : Colors.grey[400],
-                        size: 24,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tabs[i].$3,
-                        style: GoogleFonts.inter(
-                          fontSize: 8, fontWeight: FontWeight.w700,
-                          color: selected ? AppColors.primaryDark : Colors.grey[400],
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final selected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = index),
+      child: Container(
+        width: 64,
+        height: 58,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF181818) : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: selected ? const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))] : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: selected ? Colors.white : const Color(0xFFFFC09D),
+              size: 20,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : const Color(0xFFFFC09D),
+              ),
+            ),
+          ],
         ),
       ),
     );
