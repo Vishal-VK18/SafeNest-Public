@@ -1,4 +1,4 @@
-// lib/screens/profile_screen.dart
+﻿// lib/screens/profile_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,14 +21,9 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  // Local toggle states (notifications — visual only)
   bool _vitalsAlerts    = true;
   bool _weeklySummaries = false;
-
-  // Biometric — backed by StorageService
   bool _biometricEnabled = false;
-
-  // Profile photo path
   String? _profilePhotoPath;
 
   @override
@@ -38,7 +33,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _profilePhotoPath  = StorageService.profilePhotoPath;
   }
 
-  // ── Sign Out ─────────────────────────────────────────────────────────────────
   Future<void> _onSignOut() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -72,20 +66,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
-  // ── Biometric toggle ─────────────────────────────────────────────────────────
-  // Toggle only saves the enabled flag.
-  // Authentication is only triggered at app launch (splash_screen.dart).
   Future<void> _onBiometricToggle(bool val) async {
     await StorageService.setBiometricEnabled(val);
     setState(() => _biometricEnabled = val);
 
     if (val) {
-      // Quick capability check — inform user if device can't do biometrics,
-      // but do NOT call authenticate() here.
       final capable = await BiometricService.instance.canAuthenticate();
       if (!mounted) return;
       if (!capable) {
-        // Device not capable — revert the flag
         await StorageService.setBiometricEnabled(false);
         setState(() => _biometricEnabled = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -94,7 +82,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ));
         return;
       }
-      // Check enrollment
       final enrolled = await BiometricService.instance.availableBiometrics();
       if (!mounted) return;
       if (enrolled.isEmpty) {
@@ -108,7 +95,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ));
         return;
       }
-      // All good
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Biometric unlock enabled. Takes effect on next app launch.'),
         duration: Duration(seconds: 3),
@@ -116,7 +102,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  // ── Edit profile bottom sheet ─────────────────────────────────────────────────
   Future<void> _openEditProfile() async {
     final pregnancy        = ref.read(pregnancyProvider);
     final nameCtrl         = TextEditingController(text: pregnancy.userName);
@@ -152,7 +137,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle bar
                 Center(
                   child: Container(
                     width: 40,
@@ -169,7 +153,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         fontSize: 18, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 20),
 
-                // Avatar picker
                 Center(
                   child: GestureDetector(
                     onTap: pickImage,
@@ -215,7 +198,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Full Name
                 Text('Full Name',
                     style: GoogleFonts.inter(
                         fontSize: 13,
@@ -242,7 +224,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Age
                 Text('Age',
                     style: GoogleFonts.inter(
                         fontSize: 13,
@@ -271,7 +252,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Save button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -299,7 +279,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       }
                       if (!sheetCtx.mounted) return;
                       Navigator.pop(sheetCtx);
-                      // Refresh photo in parent
                       setState(() => _profilePhotoPath = pickedPhotoPath);
                     },
                     child: Text('Save Changes',
@@ -320,425 +299,367 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final pregnancy = ref.watch(pregnancyProvider);
-    final isDark    = Theme.of(context).brightness == Brightness.dark;
-
-    // Emergency contact from storage
-    final emergencyContact = StorageService.emergencyContact;
-    final emergencyPhone   = StorageService.userPhone; // phone saved during registration
+    final contacts = ref.watch(contactsProvider);
+    
+    // Gradient Background
+    final gradientDecoration = BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [const Color(0xFFFFC09D), const Color(0xFFFFCACB)],
+      ),
+    );
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Navigator.of(context).canPop()
-            ? IconButton(
-                icon: const Icon(Icons.chevron_left, size: 28),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : const SizedBox.shrink(),
-        title: Text(
-          'Settings',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[500],
-          ),
-        ),
-        centerTitle: true,
-        actions: const [SizedBox(width: 48)],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'App Settings',
-              style: GoogleFonts.inter(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
+      backgroundColor: const Color(0xFFFFFAF8), // creamy
+      body: Stack(
+        children: [
+          // Background Base Map to content-layer styles
+          Positioned.fill(
+            child: Container(
+              decoration: gradientDecoration,
+              child: Container(
+                color: Colors.white.withOpacity(0.25), // Backdrop blur equivalent
               ),
             ),
-            const SizedBox(height: 24),
-
-            // ── Profile Preview Card ──────────────────────────────────────────
-            GestureDetector(
-              onTap: _openEditProfile,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[800]!.withOpacity(0.5) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: AppColors.primary.withOpacity(0.2),
-                          backgroundImage: _profilePhotoPath != null
-                              ? FileImage(File(_profilePhotoPath!))
-                              : null,
-                          child: _profilePhotoPath == null
-                              ? Text(
-                                  pregnancy.userName.isNotEmpty
-                                      ? pregnancy.userName[0].toUpperCase()
-                                      : '?',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryDark,
-                                  ),
-                                )
-                              : null,
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
+          ),
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () => Navigator.maybePop(context),
                           child: Container(
-                            width: 18,
-                            height: 18,
+                            width: 40, height: 40,
+                            alignment: Alignment.centerLeft,
+                            child: const Icon(Icons.arrow_back_ios, color: Color(0xFF181818), size: 20),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Settings',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF181818).withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 24, top: 24, bottom: 24),
+                    child: Text(
+                      'App Settings',
+                      style: GoogleFonts.inter(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF181818),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+                    child: Column(
+                      children: [
+                        // Profile Banner (Editable)
+                        GestureDetector(
+                          onTap: _openEditProfile,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            margin: const EdgeInsets.only(bottom: 24),
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isDark ? const Color(0xFF18161C) : Colors.white,
-                                width: 2,
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20), // "ios"
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(999),
+                                      child: _profilePhotoPath != null
+                                        ? Image.file(
+                                            File(_profilePhotoPath!),
+                                            width: 56, height: 56, fit: BoxFit.cover,
+                                          )
+                                        : Container(
+                                            width: 56, height: 56,
+                                            color: const Color(0xFFFFC09D).withOpacity(0.3),
+                                            child: Center(
+                                              child: Text(
+                                                pregnancy.userName.isNotEmpty ? pregnancy.userName[0].toUpperCase() : '?',
+                                                style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF181818)),
+                                              ),
+                                            ),
+                                          ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0, right: 0,
+                                      child: Container(
+                                        width: 14, height: 14,
+                                        decoration: BoxDecoration(
+                                          color: Colors.green[500],
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 16),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      pregnancy.userName.isNotEmpty ? pregnancy.userName : 'My Profile',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF181818),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${pregnancy.pregnancyWeek > 0 ? '${pregnancy.pregnancyWeek} Weeks' : 'â€”'} â€¢ Healthy Vitals',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        
+                        // Notifications
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              _buildSettingToggleTile(
+                                'Vitals Alerts',
+                                _vitalsAlerts,
+                                (val) => setState(() => _vitalsAlerts = val),
+                              ),
+                              Divider(height: 1, color: Colors.grey[50]),
+                              _buildSettingToggleTile(
+                                'Weekly Summaries',
+                                _weeklySummaries,
+                                (val) => setState(() => _weeklySummaries = val),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Security & Contacts
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CaregiverManagementScreen()));
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Emergency Contact Access', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF181818))),
+                                          const SizedBox(height: 2),
+                                          Text('${contacts.length} people have access', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
+                                        ],
+                                      ),
+                                      Icon(Icons.chevron_right, color: Colors.grey[300], size: 24),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Divider(height: 1, color: Colors.grey[50]),
+                              _buildSettingToggleTile(
+                                'Face ID Unlock',
+                                _biometricEnabled,
+                                (val) => _onBiometricToggle(val),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Support Pages
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              _buildNavTile('How it works', onTap: () {}),
+                              Divider(height: 1, color: Colors.grey[50]),
+                              _buildNavTile('About SafeNest', trailingText: 'v2.4.1', onTap: () {}),
+                            ],
+                          ),
+                        ),
+
+                        // Sign Out Button
+                        GestureDetector(
+                          onTap: _onSignOut,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24), // card
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Sign Out',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF181818),
                               ),
                             ),
-                            child: const Icon(Icons.edit, size: 10, color: Colors.white),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pregnancy.userName.isNotEmpty
-                                ? pregnancy.userName
-                                : 'Tap to edit profile',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${pregnancy.pregnancyWeek > 0 ? '${pregnancy.pregnancyWeek} Weeks' : '—'} • Tap to edit',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, color: Colors.grey[300]),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 32),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // ── Notifications ─────────────────────────────────────────────────
-            _buildSectionHeader(Icons.notifications_active_outlined, 'Notifications'),
-            _buildSettingsGroup([
-              _buildToggleRow(
-                icon: Icons.favorite_border,
-                title: 'Vitals Alerts',
-                value: _vitalsAlerts,
-                onChanged: (val) => setState(() => _vitalsAlerts = val),
+  Widget _buildSettingToggleTile(String title, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF181818),
+            ),
+          ),
+          // Custom Toggle imitating Tailwind UI
+          GestureDetector(
+            onTap: () => onChanged(!value),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 44,
+              height: 24,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: value ? const Color(0xFFFFC09D) : Colors.grey[200],
+                borderRadius: BorderRadius.circular(999),
               ),
-              _buildToggleRow(
-                icon: Icons.history,
-                title: 'Weekly Summaries',
-                value: _weeklySummaries,
-                onChanged: (val) => setState(() => _weeklySummaries = val),
-              ),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Privacy & Security ─────────────────────────────────────────────
-            _buildSectionHeader(Icons.security, 'Privacy & Security'),
-            _buildSettingsGroup([
-              // Emergency contact — shows real name from storage
-              _buildNavigationRow(
-                icon: Icons.lock_person_outlined,
-                title: 'Emergency Contact',
-                subtitle: emergencyContact != null && emergencyContact.isNotEmpty
-                    ? emergencyContact
-                    : (emergencyPhone != null && emergencyPhone.isNotEmpty
-                        ? emergencyPhone
-                        : 'Add emergency contact'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const CaregiverManagementScreen()),
-                  );
-                },
-              ),
-              _buildAsyncToggleRow(
-                icon: Icons.fingerprint,
-                title: 'Face ID / Fingerprint',
-                subtitle: _biometricEnabled ? 'Enabled' : 'Disabled',
-                value: _biometricEnabled,
-                onChanged: _onBiometricToggle,
-              ),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Support ────────────────────────────────────────────────────────
-            _buildSectionHeader(Icons.info_outline, 'Support'),
-            _buildSettingsGroup([
-              _buildNavigationRow(
-                icon: Icons.help_outline,
-                title: 'How it works',
-                onTap: () {},
-              ),
-              _buildNavigationRow(
-                icon: Icons.description_outlined,
-                title: 'About SafeNest',
-                trailingText: 'v2.4.1',
-                onTap: () {},
-              ),
-            ]),
-            const SizedBox(height: 32),
-
-            // ── Sign Out ───────────────────────────────────────────────────────
-            InkWell(
-              onTap: _onSignOut,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                      color: AppColors.dangerRed.withOpacity(0.2), width: 2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Sign Out',
-                  style: GoogleFonts.inter(
-                    color: AppColors.dangerRed,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 200),
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            Center(
-              child: Text(
-                'ENSURING SAFE JOURNEY SINCE 2024',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  color: Colors.grey[400],
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 2.0,
-                ),
-              ),
-            ),
-            const SizedBox(height: 64),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Shared helper builders ────────────────────────────────────────────────────
-  Widget _buildSectionHeader(IconData icon, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12, left: 4),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.primary, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            title.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.0,
-              color: Colors.grey[400],
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSettingsGroup(List<Widget> children) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[800] : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: children.asMap().entries.map((entry) {
-          final index = entry.key;
-          final child = entry.value;
-          if (index == children.length - 1) return child;
-          return Column(children: [
-            child,
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: isDark ? Colors.grey[700]! : Colors.grey[100]!,
-              indent: 64,
-              endIndent: 16,
-            ),
-          ]);
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildToggleRow({
-    required IconData icon,
-    required String title,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.primaryDark, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(title,
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500)),
-          ),
-          Switch.adaptive(value: value, onChanged: onChanged, activeColor: AppColors.primary),
-        ],
-      ),
-    );
-  }
-
-  // Same as toggle but with subtitle and async onChanged
-  Widget _buildAsyncToggleRow({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required Future<void> Function(bool) onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.primaryDark, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w500)),
-                Text(subtitle,
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: Colors.grey[400])),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.primary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavigationRow({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    String? trailingText,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
+  Widget _buildNavTile(String title, {String? trailingText, VoidCallback? onTap}) {
+    return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.primaryDark, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w500)),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: GoogleFonts.inter(
-                            fontSize: 12, color: Colors.grey[400])),
-                  ],
-                ],
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF181818),
               ),
             ),
             if (trailingText != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Text(trailingText,
-                    style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.grey[400],
-                        fontWeight: FontWeight.w500)),
+              Text(
+                trailingText,
+                style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[400]),
               )
             else
-              Icon(Icons.chevron_right, color: Colors.grey[300]),
+              Icon(Icons.chevron_right, color: Colors.grey[300], size: 24),
           ],
         ),
       ),
     );
   }
 }
+

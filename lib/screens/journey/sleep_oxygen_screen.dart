@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../providers/providers.dart';
+import '../../../utils/blush_theme.dart';
 
 class SleepOxygenScreen extends ConsumerWidget {
   const SleepOxygenScreen({super.key});
@@ -11,9 +12,9 @@ class SleepOxygenScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sleep = ref.watch(sleepOxygenProvider);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -36,8 +37,14 @@ class SleepOxygenScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
+      body: Stack(
+        children: [
+          // ── Blush gradient background
+          Positioned.fill(
+            child: Container(decoration: const BoxDecoration(gradient: BlushGradients.background)),
+          ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
         child: Column(
           children: [
             // Overall Sleep Header
@@ -339,6 +346,8 @@ class SleepOxygenScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+        ],
       ),
     );
   }

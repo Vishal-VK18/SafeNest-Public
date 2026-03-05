@@ -61,14 +61,76 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 const ProfileScreen(),
               ],
             ),
-            // Animated bottom navigation bar
+            // Floating pill nav bar
             Positioned(
-              left: 0, right: 0, bottom: 0,
-              child: SafeNestBottomNavBar(
-                selectedIndex: _selectedTab,
-                onTabChange: (index, label) {
-                  setState(() => _selectedTab = index);
-                },
+              left: 0, right: 0, bottom: 16,
+              child: _buildBottomNav(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Center(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxWidth: 380),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFC09D).withOpacity(0.2), // shadow-peach/20
+              blurRadius: 24, // shadow-2xl equivalent ish
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildNavItem(0, Icons.grid_view_rounded, 'Dashboard'),
+            _buildNavItem(1, Icons.auto_graph_rounded, 'Journey'),
+            _buildNavItem(2, Icons.watch_rounded, 'Devices'),
+            _buildNavItem(3, Icons.notifications_rounded, 'Alerts'),
+            _buildNavItem(4, Icons.person_rounded, 'Profile'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final selected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = index),
+      child: Container(
+        width: 64,
+        height: 58,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF181818) : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: selected ? const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))] : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: selected ? Colors.white : const Color(0xFFFFC09D),
+              size: 20,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : const Color(0xFFFFC09D),
               ),
             ),
           ],

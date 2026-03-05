@@ -22,6 +22,9 @@ import 'screens/logs/fall_event_log_screen.dart';
 import 'screens/logs/heart_rate_page.dart';
 import 'screens/logs/temperature_page.dart';
 import 'screens/sim_module_status_screen.dart';
+import 'screens/journey/hydration_tracker/hydration_tracker_screen.dart';
+import 'screens/journey/sleep_oxygen_screen.dart';
+import 'screens/journey/appointment_details_screen.dart';
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -120,10 +123,17 @@ class SafeNestApp extends StatelessWidget {
       initialRoute: RouteConstants.splash,
       routes: {
         RouteConstants.splash: (context) => const SplashScreen(),
-        RouteConstants.home: (context) => const HomeDashboardScreen(),
+        RouteConstants.home:    (context) => const HomeDashboardScreen(),
+        RouteConstants.dashboard: (context) => const HomeDashboardScreen(),
+        RouteConstants.journey:  (context) => const HomeDashboardScreen(),
         RouteConstants.devices: (context) => const DeviceConnectionScreen(),
         RouteConstants.profile: (context) => const ProfileScreen(),
-        RouteConstants.alerts: (context) => const EmergencyAlertScreen(),
+        RouteConstants.alerts:  (context) => const EmergencyAlertScreen(),
+        RouteConstants.hydration:          (context) => const HydrationTrackerScreen(initialPage: 0),
+        RouteConstants.hydrationStats:     (context) => const HydrationTrackerScreen(initialPage: 1),
+        RouteConstants.hydrationReminders: (context) => const HydrationTrackerScreen(initialPage: 2),
+        RouteConstants.sleep:              (context) => const SleepOxygenScreen(),
+        RouteConstants.appointment:        (context) => const AppointmentDetailsScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == RouteConstants.heartRate) {

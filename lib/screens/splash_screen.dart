@@ -1,6 +1,6 @@
 // lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
-import '../utils/app_theme.dart';
+import '../utils/blush_theme.dart';
 import '../services/storage_service.dart';
 import '../utils/dev_config.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -71,11 +71,19 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: FadeTransition(
-        opacity: _fadeAnim,
-        child: ScaleTransition(
-          scale: _scaleAnim,
+      body: Stack(
+        children: [
+          // ── Blush gradient background
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(gradient: BlushGradients.background),
+            ),
+          ),
+          // ── Content
+          FadeTransition(
+            opacity: _fadeAnim,
+            child: ScaleTransition(
+              scale: _scaleAnim,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -158,8 +166,10 @@ class _SplashScreenState extends State<SplashScreen>
               ],
             ),
           ),
-        ),
-      ),
-    );
+        ), // Close ScaleTransition
+      ), // Close FadeTransition
+        ], // Close Stack children
+      ), // Close Stack
+    ); // Close Scaffold
   }
 }
