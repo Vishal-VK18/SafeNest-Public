@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../utils/app_theme.dart';
 import '../../providers/providers.dart';
 import '../../models/temperature_entry.dart';
 
@@ -69,9 +68,9 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: const ColorScheme.light(
-          primary: AppColors.primary,
+          primary: Color(0xFF1F3D3D), // Safenest Dark Teal
           onPrimary: Colors.white,
-          onSurface: Colors.black,
+          onSurface: Color(0xFF181818),
         ),
       ),
       child: child,
@@ -84,40 +83,69 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
     final filteredEntries = _filterEntries(allEntries);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: true,
-        title: Text(
-          'Temperature Log',
-          style: GoogleFonts.outfit(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1C1C1E),
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Color(0xFF1C1C1E)),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildRangeSelector(),
-            Expanded(
-              child: filteredEntries.isEmpty ? _buildEmptyState() : _buildLogList(filteredEntries),
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+              ),
             ),
-            _buildExportButton(filteredEntries),
-          ],
-        ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _buildHeader(context),
+                _buildRangeSelector(),
+                Expanded(
+                  child: filteredEntries.isEmpty
+                      ? _buildEmptyState()
+                      : _buildLogList(filteredEntries),
+                ),
+                _buildExportButton(filteredEntries),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.centerLeft,
+              child: const Icon(Icons.arrow_back, color: Color(0xFF181818), size: 24),
+            ),
+          ),
+          Text(
+            'Temperature Log',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: true ? FontWeight.bold : FontWeight.w700,
+              color: const Color(0xFF181818),
+            ),
+          ),
+          const SizedBox(width: 40), // Balance the flex
+        ],
       ),
     );
   }
 
   Widget _buildRangeSelector() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         children: [
           Expanded(child: _buildDateTile("FROM", fromDate, () => _selectFromDate(context))),
@@ -129,34 +157,39 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
   }
 
   Widget _buildDateTile(String label, DateTime date, VoidCallback onTap) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.softGray,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withOpacity(0.65),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 25,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[500],
-                letterSpacing: 1,
+                color: const Color(0xFF181818).withOpacity(0.4),
+                letterSpacing: 1.5,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               DateFormat('MMM dd, yyyy').format(date),
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1C1C1E),
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF181818),
               ),
             ),
           ],
@@ -170,11 +203,23 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.thermostat_outlined, size: 64, color: AppColors.primary.withOpacity(0.3)),
-          const SizedBox(height: 16),
+          Container(
+            width: 96,
+            height: 96,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFE5DA),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.device_thermostat, size: 60, color: Color(0xFFFFC09D)),
+          ),
+          const SizedBox(height: 24),
           Text(
             'No data for this range',
-            style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[400]),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF9A9A9A),
+            ),
           ),
         ],
       ),
@@ -182,34 +227,38 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
   }
 
   Widget _buildLogList(List<TemperatureEntry> entries) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(20),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       itemCount: entries.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _buildLogCard(entries[index]),
     );
   }
 
   Widget _buildLogCard(TemperatureEntry entry) {
     final bool isElevated = entry.value >= 37.5;
-    const Color coral = Color(0xFFF08080);
-
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isElevated ? coral.withOpacity(0.05) : AppColors.softGray,
+        color: Colors.white.withOpacity(0.65),
         borderRadius: BorderRadius.circular(20),
-        border: isElevated ? Border.all(color: coral.withOpacity(0.2), width: 1) : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isElevated ? coral.withOpacity(0.1) : AppColors.primary.withOpacity(0.1),
+              color: isElevated ? const Color(0xFFFF9E80).withOpacity(0.2) : const Color(0xFFFFE5DA),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.thermostat_rounded, color: isElevated ? coral : AppColors.primary, size: 20),
+            child: Icon(Icons.device_thermostat, color: isElevated ? const Color(0xFFFF9E80) : const Color(0xFF181818), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -218,17 +267,18 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
               children: [
                 Text(
                   '${entry.value.toStringAsFixed(1)}°C',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1C1C1E),
+                    color: const Color(0xFF181818),
                   ),
                 ),
                 Text(
                   DateFormat('MMMM dd, hh:mm a').format(entry.timestamp),
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF6B6B6B),
                   ),
                 ),
               ],
@@ -237,15 +287,16 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: isElevated ? coral.withOpacity(0.15) : AppColors.statusGreen.withOpacity(0.15),
+              color: isElevated ? const Color(0xFFFF9E80).withOpacity(0.2) : Colors.green.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               isElevated ? "ELEVATED" : "NORMAL",
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: isElevated ? coral : AppColors.statusGreen,
+                letterSpacing: 1,
+                color: isElevated ? const Color(0xFFFF9E80) : Colors.green,
               ),
             ),
           ),
@@ -256,45 +307,43 @@ class _TemperatureLogPageState extends ConsumerState<TemperatureLogPage> {
 
   Widget _buildExportButton(List<TemperatureEntry> filteredEntries) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-      child: Container(
-        width: double.infinity,
-        height: 56,
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(28),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${filteredEntries.length} entries exported')),
-              );
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.share_rounded, color: Colors.white),
-                const SizedBox(width: 12),
-                Text(
-                  "EXPORT DATA",
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+      child: GestureDetector(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${filteredEntries.length} entries exported')),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1F3D3D),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.share, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Text(
+                "EXPORT DATA",
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                  color: Colors.white,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

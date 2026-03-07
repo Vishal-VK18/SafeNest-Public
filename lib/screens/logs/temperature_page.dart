@@ -7,21 +7,10 @@ import '../../core/constants/route_constants.dart';
 import '../../providers/providers.dart';
 import '../../models/device_status_model.dart';
 import '../../models/temperature_entry.dart';
+import 'temperature_log_page.dart';
 
 class TemperaturePage extends ConsumerWidget {
   const TemperaturePage({super.key});
-
-  // Strict Design System Colors
-  static const Color primaryLilac = Color(0xFFBDB0D0);
-  static const Color backgroundWhite = Color(0xFFFFFFFF);
-  static const Color cardGray = Color(0xFFF5F5F7);
-  static const Color successGreen = Color(0xFF4CAF50);
-  static const Color successGreenTint = Color(0xFFE8F5E9);
-  static const Color graphOrange = Color(0xFFFFAB40);
-  static const Color mutedGray = Color(0xFF8E8E93);
-  static const Color textBlack = Color(0xFF1C1C1E);
-  static const Color alertRed = Color(0xFFF44336);
-  static const Color alertRedTint = Color(0xFFFFEBEE);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,190 +20,204 @@ class TemperaturePage extends ConsumerWidget {
     final isConnected = deviceStatus.watch.status == ConnectionStatus.connected;
 
     return Scaffold(
-      backgroundColor: backgroundWhite,
-      appBar: AppBar(
-        backgroundColor: backgroundWhite,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: true,
-        title: Text(
-          "Body Temp",
-          style: GoogleFonts.outfit(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: textBlack,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: textBlack),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              _buildHeader(isConnected),
-              const SizedBox(height: 24),
-              _buildMainTemperatureCard(health.temperature, health.isTemperatureNormal),
-              const SizedBox(height: 16),
-              _buildInfoCardsRow(health.receivedAt, health.isTemperatureNormal),
-              const SizedBox(height: 32),
-              _buildHistoryHeader(),
-              const SizedBox(height: 16),
-              _buildHistoryList(tempLog.take(3).toList()),
-              const SizedBox(height: 32),
-              _buildBottomButton(context),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(bool isConnected) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "LIVE MONITORING",
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: primaryLilac,
-                letterSpacing: 1.2,
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
               ),
             ),
-            const SizedBox(height: 4),
-            Row(
+          ),
+          SafeArea(
+            bottom: false,
+            child: Column(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isConnected ? successGreen : mutedGray,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  isConnected ? "Connected to Watch" : "Disconnected",
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: textBlack,
+                _buildHeader(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(left: 24, right: 24, bottom: 120),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLiveStatus(isConnected),
+                        const SizedBox(height: 32),
+                        _buildMainTemperatureCard(health.temperature, health.isTemperatureNormal),
+                        const SizedBox(height: 16),
+                        _buildInfoCardsRow(health.receivedAt, health.isTemperatureNormal),
+                        const SizedBox(height: 32),
+                        _buildHistoryCard(tempLog.take(3).toList()),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: cardGray,
-            shape: BoxShape.circle,
-            border: Border.all(color: primaryLilac.withOpacity(0.2), width: 1),
           ),
-          child: const Icon(Icons.person_outline, color: primaryLilac),
+          // Floating Button at Bottom
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 40,
+            child: _buildBottomButton(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.centerLeft,
+              child: const Icon(Icons.arrow_back, color: Color(0xFF181818), size: 24),
+            ),
+          ),
+          Text(
+            'Body Temp',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF181818),
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFE5DA),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person, color: Color(0xFF181818), size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveStatus(bool isConnected) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "LIVE MONITORING",
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.1,
+            color: const Color(0xFF181818).withOpacity(0.4),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(Icons.circle, color: isConnected ? Colors.green : const Color(0xFF6B6B6B), size: 10),
+            const SizedBox(width: 6),
+            Text(
+              isConnected ? "Connected" : "Disconnected",
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF6B6B6B),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildMainTemperatureCard(double temperature, bool isNormal) {
-    final tempDisplay = temperature > 0
-        ? temperature.toStringAsFixed(1)
-        : '--.-';
-    final badgeText = temperature > 0 ? (isNormal ? "NORMAL" : "ALERT") : "WAITING";
-    final badgeColor = temperature > 0
-        ? (isNormal ? successGreen : alertRed)
-        : mutedGray;
-    final badgeBg = temperature > 0
-        ? (isNormal ? successGreenTint : alertRedTint)
-        : cardGray;
+    final tempDisplay = temperature > 0 ? temperature.toStringAsFixed(1) : '--.-';
+    final badgeText = temperature > 0 ? (isNormal ? "NORMAL" : "ELEVATED") : "WAITING";
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.only(top: 32),
       decoration: BoxDecoration(
-        color: cardGray,
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 25,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "BODY TEMPERATURE",
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: mutedGray,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  badgeText,
-                  style: GoogleFonts.outfit(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "BODY TEMPERATURE",
+                  style: GoogleFonts.inter(
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: badgeColor,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: const Color(0xFF181818).withOpacity(0.4),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                tempDisplay,
-                style: GoogleFonts.outfit(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w700,
-                  color: textBlack,
+                Text(
+                  badgeText,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: const Color(0xFF181818).withOpacity(0.3),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                "°C",
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: mutedGray,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  tempDisplay,
+                  style: GoogleFonts.inter(
+                    fontSize: 60,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -2,
+                    color: const Color(0xFF181818),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  "°C",
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF181818).withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 48),
           SizedBox(
-            height: 100,
+            height: 96,
             width: double.infinity,
             child: CustomPaint(
-              painter: _TemperatureGraphPainter(color: graphOrange),
+              painter: _TemperatureGraphPainter(color: const Color(0xFF1F3F3F)),
             ),
           ),
         ],
@@ -224,138 +227,191 @@ class TemperaturePage extends ConsumerWidget {
 
   Widget _buildInfoCardsRow(DateTime receivedAt, bool isNormal) {
     final hasData = receivedAt.year > 2000;
-    final timeText = hasData
-        ? DateFormat('hh:mm a').format(receivedAt)
-        : '--:--';
-    final statusText = hasData ? (isNormal ? 'Stable' : 'Elevated') : 'Waiting';
+    final timeText = hasData ? DateFormat('hh:mm a').format(receivedAt) : '--:--';
+    final statusText = hasData ? (isNormal ? 'Normal' : 'Elevated') : 'Waiting';
+    final statusColor = hasData && !isNormal ? const Color(0xFFFF9E80) : const Color(0xFF181818);
+    final statusIconColor = hasData && !isNormal ? const Color(0xFFFF9E80) : const Color(0xFF181818);
 
     return Row(
       children: [
         Expanded(
           child: _InfoCard(
-            icon: Icons.access_time_filled_rounded,
-            iconColor: primaryLilac,
-            iconBg: primaryLilac.withOpacity(0.15),
+            icon: Icons.schedule,
+            iconColor: const Color(0xFF181818),
             label: "LAST CHECK",
             value: timeText,
+            valueColor: const Color(0xFF181818),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: _InfoCard(
-            icon: Icons.check_circle_rounded,
-            iconColor: successGreen,
-            iconBg: successGreen.withOpacity(0.15),
+            icon: Icons.check_circle,
+            iconColor: statusIconColor,
             label: "STATUS",
             value: statusText,
+            valueColor: statusColor,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildHistoryHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          "TEMPERATURE HISTORY",
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: primaryLilac,
-            letterSpacing: 1.2,
+  Widget _buildHistoryCard(List<TemperatureEntry> entries) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 25,
           ),
-        ),
-        Text(
-          "RECENT",
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: mutedGray,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHistoryList(List<TemperatureEntry> entries) {
-    if (entries.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: cardGray,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Center(
-          child: Text(
-            "No readings yet",
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: mutedGray,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "TEMPERATURE HISTORY",
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: const Color(0xFF181818).withOpacity(0.4),
+                  ),
+                ),
+                Text(
+                  "RECENT",
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: const Color(0xFF181818).withOpacity(0.4),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      );
-    }
-
-    return Column(
-      children: entries.asMap().entries.map((e) {
-        final entry = e.value;
-        final isNormal = entry.value >= 35.0 && entry.value < 37.5;
-        final subtext = isNormal ? "Within normal range" : "Temperature elevated";
-        final time = DateFormat('hh:mm a').format(entry.timestamp);
-        final color = isNormal ? graphOrange : Colors.redAccent.shade100;
-
-        return Padding(
-          padding: EdgeInsets.only(bottom: e.key < entries.length - 1 ? 12 : 0),
-          child: _HistoryItem(
-            value: "${entry.value.toStringAsFixed(1)}°C",
-            subtext: subtext,
-            time: time,
-            iconColor: color,
-          ),
-        );
-      }).toList(),
+          Divider(height: 1, color: const Color(0xFF181818).withOpacity(0.05)),
+          if (entries.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Center(
+                child: Text(
+                  "No readings yet",
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF9A9A9A),
+                  ),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: entries.map((e) {
+                final isNormal = e.value >= 35.0 && e.value < 37.5;
+                final subtext = isNormal ? "Within normal range" : "Elevated reading";
+                final time = DateFormat('hh:mm a').format(e.timestamp);
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFE5DA),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.device_thermostat, color: Color(0xFF181818), size: 20),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${e.value.toStringAsFixed(1)}°C",
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF181818),
+                              ),
+                            ),
+                            Text(
+                              subtext,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF6B6B6B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        time,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF6B6B6B),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildBottomButton(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        color: primaryLilac,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: primaryLilac.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TemperatureLogPage(),
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(28),
-          onTap: () => Navigator.pushNamed(context, RouteConstants.temperatureLog),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.history_rounded, color: Colors.white),
-              const SizedBox(width: 12),
-              Text(
-                "VIEW FULL LOG",
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F3D3D),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "VIEW FULL LOG",
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                color: Colors.white,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -365,123 +421,61 @@ class TemperaturePage extends ConsumerWidget {
 class _InfoCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final Color iconBg;
   final String label;
   final String value;
+  final Color valueColor;
 
   const _InfoCard({
     required this.icon,
     required this.iconColor,
-    required this.iconBg,
     required this.label,
     required this.value,
+    required this.valueColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: TemperaturePage.cardGray,
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 25,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconBg,
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFE5DA),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 20),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             label,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: TemperaturePage.mutedGray,
-              letterSpacing: 0.5,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+              color: const Color(0xFF181818).withOpacity(0.4),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: TemperaturePage.textBlack,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HistoryItem extends StatelessWidget {
-  final String value;
-  final String subtext;
-  final String time;
-  final Color iconColor;
-
-  const _HistoryItem({
-    required this.value,
-    required this.subtext,
-    required this.time,
-    required this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: TemperaturePage.cardGray,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.thermostat_rounded, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: TemperaturePage.textBlack,
-                  ),
-                ),
-                Text(
-                  subtext,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: TemperaturePage.mutedGray,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            time,
-            style: GoogleFonts.outfit(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: TemperaturePage.mutedGray,
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: valueColor,
             ),
           ),
         ],
@@ -498,32 +492,28 @@ class _TemperatureGraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color
+      ..color = const Color(0xFFFFC09D)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
     final path = Path();
-    path.moveTo(0, size.height * 0.5);
+    path.moveTo(0, size.height * 0.75);
 
-    // Simple smooth curve representing temperature
-    path.quadraticBezierTo(
-      size.width * 0.2, size.height * 0.4,
-      size.width * 0.4, size.height * 0.6,
+    path.cubicTo(
+      size.width * 0.2, size.height * 0.75,
+      size.width * 0.3, size.height * 0.65,
+      size.width * 0.5, size.height * 0.65,
     );
-    path.quadraticBezierTo(
-      size.width * 0.6, size.height * 0.8,
-      size.width * 0.8, size.height * 0.5,
-    );
-    path.quadraticBezierTo(
-      size.width * 0.9, size.height * 0.3,
-      size.width, size.height * 0.4,
+    path.cubicTo(
+      size.width * 0.7, size.height * 0.65,
+      size.width * 0.8, size.height * 0.7,
+      size.width, size.height * 0.7,
     );
 
     canvas.drawPath(path, paint);
 
-    // Gradient fill below curve
     final fillPath = Path.from(path);
     fillPath.lineTo(size.width, size.height);
     fillPath.lineTo(0, size.height);
@@ -534,8 +524,8 @@ class _TemperatureGraphPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          color.withOpacity(0.3),
-          color.withOpacity(0.0),
+          const Color(0xFFFFC09D).withOpacity(0.3),
+          const Color(0xFFFFC09D).withOpacity(0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 

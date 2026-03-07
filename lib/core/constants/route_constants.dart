@@ -1,14 +1,17 @@
 // lib/core/constants/route_constants.dart
 
 class RouteConstants {
-  static const String splash      = '/';
+  static const String splash      = '/splash';
+  static const String getStarted  = '/get-started';
+  static const String login       = '/login';
+  static const String createAccount = '/create-account';
   static const String home        = '/home';
   static const String dashboard   = '/dashboard';
   static const String journey     = '/journey';
   static const String devices     = '/devices';
   static const String profile     = '/profile';
   static const String alerts      = '/alerts';
-  static const String sosSent     = '/sos-sent';
+  static const String alertsList  = '/alerts-list';
   
   // Logs
   static const String heartRate      = '/heart-rate';

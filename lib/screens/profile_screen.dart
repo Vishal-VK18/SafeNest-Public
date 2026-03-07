@@ -13,14 +13,14 @@ import '../services/storage_service.dart';
 import '../utils/app_theme.dart';
 import 'caregiver_management_screen.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+class SettingsScreen extends ConsumerStatefulWidget {
+  const SettingsScreen({super.key});
 
   @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _vitalsAlerts    = true;
   bool _weeklySummaries = false;
   bool _biometricEnabled = false;
@@ -160,7 +160,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         CircleAvatar(
                           radius: 44,
-                          backgroundColor: AppColors.primary.withOpacity(0.15),
+                          backgroundColor: const Color(0xFFFFC09D).withOpacity(0.15),
                           backgroundImage: pickedPhotoPath != null
                               ? FileImage(File(pickedPhotoPath!))
                               : null,
@@ -172,7 +172,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryDark,
+                                    color: const Color(0xFF181818),
                                   ),
                                 )
                               : null,
@@ -183,7 +183,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
+                            color: const Color(0xFFFFC09D),
                               shape: BoxShape.circle,
                               border:
                                   Border.all(color: Colors.white, width: 2),
@@ -213,11 +213,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                            color: AppColors.primary.withOpacity(0.3))),
+                            color: const Color(0xFFFFC09D).withOpacity(0.4))),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(
-                            color: AppColors.primary, width: 2)),
+                            color: Color(0xFFFFC09D), width: 2)),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                   ),
@@ -241,11 +241,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                            color: AppColors.primary.withOpacity(0.3))),
+                            color: const Color(0xFFFFC09D).withOpacity(0.4))),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(
-                            color: AppColors.primary, width: 2)),
+                            color: Color(0xFFFFC09D), width: 2)),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                   ),
@@ -257,10 +257,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: const Color(0xFF1F3D3D),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
                     ),
                     onPressed: () async {
                       final name = nameCtrl.text.trim();
@@ -292,8 +293,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         });
       },
     );
-    nameCtrl.dispose();
-    ageCtrl.dispose();
   }
 
   @override
@@ -336,7 +335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: GestureDetector(
-                          onTap: () => Navigator.maybePop(context),
+                          onTap: () => Navigator.pop(context),
                           child: Container(
                             width: 40, height: 40,
                             alignment: Alignment.centerLeft,
@@ -377,20 +376,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
                     child: Column(
                       children: [
-                        // Profile Banner (Editable)
+                        // Profile Banner (Editable Hero Card)
                         GestureDetector(
                           onTap: _openEditProfile,
                           child: Container(
-                            padding: const EdgeInsets.all(16),
-                            margin: const EdgeInsets.only(bottom: 24),
+                            padding: const EdgeInsets.all(20),
+                            margin: const EdgeInsets.only(bottom: 32),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20), // "ios"
+                              color: Colors.white.withOpacity(0.65),
+                              borderRadius: BorderRadius.circular(20),
                               boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                ),
+                                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25),
                               ],
                             ),
                             child: Row(
@@ -402,15 +398,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       child: _profilePhotoPath != null
                                         ? Image.file(
                                             File(_profilePhotoPath!),
-                                            width: 56, height: 56, fit: BoxFit.cover,
+                                            width: 64, height: 64, fit: BoxFit.cover,
                                           )
                                         : Container(
-                                            width: 56, height: 56,
+                                            width: 64, height: 64,
                                             color: const Color(0xFFFFC09D).withOpacity(0.3),
                                             child: Center(
                                               child: Text(
-                                                pregnancy.userName.isNotEmpty ? pregnancy.userName[0].toUpperCase() : '?',
-                                                style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF181818)),
+                                                pregnancy.userName.isNotEmpty ? pregnancy.userName[0].toUpperCase() : 'S',
+                                                style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.bold, color: const Color(0xFF181818)),
                                               ),
                                             ),
                                           ),
@@ -418,7 +414,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     Positioned(
                                       bottom: 0, right: 0,
                                       child: Container(
-                                        width: 14, height: 14,
+                                        width: 16, height: 16,
                                         decoration: BoxDecoration(
                                           color: Colors.green[500],
                                           shape: BoxShape.circle,
@@ -429,121 +425,91 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   ],
                                 ),
                                 const SizedBox(width: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      pregnancy.userName.isNotEmpty ? pregnancy.userName : 'My Profile',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF181818),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        pregnancy.userName.isNotEmpty ? pregnancy.userName : 'Sarah',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF181818),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${pregnancy.pregnancyWeek > 0 ? '${pregnancy.pregnancyWeek} Weeks' : 'â€”'} â€¢ Healthy Vitals',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.grey[500],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        pregnancy.pregnancyWeek > 0 ? '${pregnancy.pregnancyWeek} Weeks • Healthy Vitals' : 'Pregnancy Journey',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: const Color(0xFF6B6B6B),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
+                                const Icon(Icons.edit_outlined, color: Color(0xFF181818), size: 24),
                               ],
                             ),
                           ),
                         ),
                         
                         // Notifications
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              _buildSettingToggleTile(
-                                'Vitals Alerts',
-                                _vitalsAlerts,
-                                (val) => setState(() => _vitalsAlerts = val),
-                              ),
-                              Divider(height: 1, color: Colors.grey[50]),
-                              _buildSettingToggleTile(
-                                'Weekly Summaries',
-                                _weeklySummaries,
-                                (val) => setState(() => _weeklySummaries = val),
-                              ),
-                            ],
-                          ),
+                        _buildGroupedCardWrapper(
+                          children: [
+                            _buildSectionItem(
+                              icon: Icons.monitor_heart_outlined,
+                              title: 'Vitals Alerts',
+                              trailing: _buildToggleSwitch(_vitalsAlerts, (val) => setState(() => _vitalsAlerts = val)),
+                            ),
+                            _buildSectionItem(
+                              icon: Icons.calendar_month_outlined,
+                              title: 'Weekly Summaries',
+                              trailing: _buildToggleSwitch(_weeklySummaries, (val) => setState(() => _weeklySummaries = val)),
+                              showDivider: false,
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 32),
                         
                         // Security & Contacts
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CaregiverManagementScreen()));
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Emergency Contact Access', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF181818))),
-                                          const SizedBox(height: 2),
-                                          Text('${contacts.length} people have access', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
-                                        ],
-                                      ),
-                                      Icon(Icons.chevron_right, color: Colors.grey[300], size: 24),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Divider(height: 1, color: Colors.grey[50]),
-                              _buildSettingToggleTile(
-                                'Face ID Unlock',
-                                _biometricEnabled,
-                                (val) => _onBiometricToggle(val),
-                              ),
-                            ],
-                          ),
+                        _buildGroupedCardWrapper(
+                          children: [
+                            _buildSectionItem(
+                              icon: Icons.health_and_safety_outlined,
+                              title: 'Emergency Contact Access',
+                              trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF6B6B6B), size: 16),
+                              onTap: () {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => const CaregiverManagementScreen()));
+                              },
+                            ),
+                            _buildSectionItem(
+                              icon: Icons.face_outlined,
+                              title: 'Face ID Unlock',
+                              trailing: _buildToggleSwitch(_biometricEnabled, (val) => _onBiometricToggle(val)),
+                              showDivider: false,
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 32),
                         
                         // Support Pages
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              _buildNavTile('How it works', onTap: () {}),
-                              Divider(height: 1, color: Colors.grey[50]),
-                              _buildNavTile('About SafeNest', trailingText: 'v2.4.1', onTap: () {}),
-                            ],
-                          ),
+                        _buildGroupedCardWrapper(
+                          children: [
+                            _buildSectionItem(
+                              icon: Icons.info_outline_rounded,
+                              title: 'How SafeNest Works',
+                              trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF6B6B6B), size: 16),
+                            ),
+                            _buildSectionItem(
+                              icon: Icons.help_outline_rounded,
+                              title: 'About SafeNest',
+                              trailing: Text('v2.4.1', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF6B6B6B))),
+                              showDivider: false,
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 32),
 
                         // Sign Out Button
                         GestureDetector(
@@ -552,17 +518,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24), // card
+                              color: Colors.white.withOpacity(0.65),
+                              borderRadius: BorderRadius.circular(20),
                               boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25),
                               ],
                             ),
                             alignment: Alignment.center,
                             child: Text(
                               'Sign Out',
                               style: GoogleFonts.inter(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xFF181818),
                               ),
@@ -581,82 +547,87 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildSettingToggleTile(String title, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildGroupedCardWrapper({required List<Widget> children}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25),
+        ],
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildSectionItem({
+    required IconData icon,
+    required String title,
+    Widget? trailing,
+    VoidCallback? onTap,
+    bool showDivider = true,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF181818),
-            ),
-          ),
-          // Custom Toggle imitating Tailwind UI
-          GestureDetector(
-            onTap: () => onChanged(!value),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 44,
-              height: 24,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: value ? const Color(0xFFFFC09D) : Colors.grey[200],
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: AnimatedAlign(
-                duration: const Duration(milliseconds: 200),
-                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Icon(icon, color: const Color(0xFF181818), size: 24),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF181818),
+                    ),
                   ),
                 ),
-              ),
+                if (trailing != null) trailing,
+              ],
             ),
           ),
+          if (showDivider)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Divider(height: 1, color: const Color(0xFF181818).withOpacity(0.1)),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildNavTile(String title, {String? trailingText, VoidCallback? onTap}) {
+  Widget _buildToggleSwitch(bool value, ValueChanged<bool> onChanged) {
     return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF181818),
-              ),
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 44,
+        height: 24,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: value ? const Color(0xFFFFC09D) : Colors.grey[300],
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 200),
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
+              ],
             ),
-            if (trailingText != null)
-              Text(
-                trailingText,
-                style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[400]),
-              )
-            else
-              Icon(Icons.chevron_right, color: Colors.grey[300], size: 24),
-          ],
+          ),
         ),
       ),
     );

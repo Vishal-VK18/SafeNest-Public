@@ -363,7 +363,7 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                       Align(
                         alignment: Alignment.centerLeft,
                         child: GestureDetector(
-                          onTap: () => Navigator.maybePop(context),
+                          onTap: () => Navigator.pop(context),
                           child: Container(
                             width: 40, height: 40,
                             alignment: Alignment.centerLeft,

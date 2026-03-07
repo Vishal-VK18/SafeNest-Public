@@ -142,6 +142,12 @@ class StorageService {
     await _settings.put(AppConstants.keySafetyHistory, list);
   }
 
+  static bool get isOnboardingComplete =>
+      (_settings.get('is_onboarding_complete') as bool?) ?? false;
+
+  static Future<void> setOnboardingComplete(bool val) =>
+      _settings.put('is_onboarding_complete', val);
+
   static bool getBatteryPermissionAsked() =>
       (_settings.get('battery_permission_asked') as bool?) ?? false;
 

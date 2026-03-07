@@ -19,9 +19,10 @@ class HeartRatePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundWhite,
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: backgroundWhite,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
@@ -35,26 +36,38 @@ class HeartRatePage extends StatelessWidget {
         ),
         iconTheme: const IconThemeData(color: textBlack),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              _buildHeader(),
-              const SizedBox(height: 24),
-              _buildMainHeartRateCard(),
-              const SizedBox(height: 16),
-              _buildInfoCardsRow(),
-              const SizedBox(height: 32),
-              _buildHistoryHeader(),
-              const SizedBox(height: 16),
-              _buildHistoryList(),
-              const SizedBox(height: 32),
-              _buildBottomButton(context),
-              const SizedBox(height: 24),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFC09D),
+              Color(0xFFFFCACB),
             ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                _buildHeader(),
+                const SizedBox(height: 24),
+                _buildMainHeartRateCard(),
+                const SizedBox(height: 16),
+                _buildInfoCardsRow(),
+                const SizedBox(height: 32),
+                _buildHistoryHeader(),
+                const SizedBox(height: 16),
+                _buildHistoryList(),
+                const SizedBox(height: 32),
+                _buildBottomButton(context),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -120,13 +133,13 @@ class HeartRatePage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: cardGray,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -234,7 +247,7 @@ class HeartRatePage extends StatelessWidget {
           style: GoogleFonts.outfit(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: primaryLilac,
+            color: textBlack,
             letterSpacing: 1.2,
           ),
         ),
@@ -282,11 +295,16 @@ class HeartRatePage extends StatelessWidget {
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        color: primaryLilac,
-        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFC09D),
+            Color(0xFFFFB6A5),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: primaryLilac.withOpacity(0.3),
+            color: const Color(0xFFFFC09D).withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -295,7 +313,7 @@ class HeartRatePage extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(18),
           onTap: () => Navigator.pushNamed(context, RouteConstants.heartRateLog),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -338,8 +356,15 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: HeartRatePage.cardGray,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,8 +420,15 @@ class _HistoryItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: HeartRatePage.cardGray,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [

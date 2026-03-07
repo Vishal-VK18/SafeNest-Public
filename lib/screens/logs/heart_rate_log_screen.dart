@@ -106,25 +106,39 @@ class _HeartRateLogScreenState extends State<HeartRateLogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text('Heart Rate Log', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         foregroundColor: const Color(0xFF1C1C1E),
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          _buildRangeSelector(),
-          Expanded(
-            child: filteredEntries.isEmpty 
-              ? _buildEmptyState()
-              : _buildLogList(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFC09D),
+              Color(0xFFFFCACB),
+            ],
           ),
-          _buildExportButton(),
-        ],
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 100), // Spacing for AppBar
+            _buildRangeSelector(),
+            Expanded(
+              child: filteredEntries.isEmpty 
+                ? _buildEmptyState()
+                : _buildLogList(),
+            ),
+            _buildExportButton(),
+          ],
+        ),
       ),
     );
   }
@@ -132,7 +146,7 @@ class _HeartRateLogScreenState extends State<HeartRateLogScreen> {
   Widget _buildRangeSelector() {
     return Container(
       padding: const EdgeInsets.all(20),
-      color: Colors.white,
+      color: Colors.white.withOpacity(0.4),
       child: Row(
         children: [
           Expanded(
@@ -218,9 +232,16 @@ class _HeartRateLogScreenState extends State<HeartRateLogScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isElevated ? coral.withOpacity(0.05) : AppColors.softGray,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: isElevated ? Border.all(color: coral.withOpacity(0.2), width: 1) : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: isElevated ? Border.all(color: coral.withOpacity(0.3), width: 1.5) : null,
       ),
       child: Row(
         children: [
@@ -286,11 +307,16 @@ class _HeartRateLogScreenState extends State<HeartRateLogScreen> {
         width: double.infinity,
         height: 56,
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFFFFC09D),
+              Color(0xFFFFB6A5),
+            ],
+          ),
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
+              color: const Color(0xFFFFC09D).withOpacity(0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

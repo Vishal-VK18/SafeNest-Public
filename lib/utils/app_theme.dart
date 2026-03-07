@@ -37,6 +37,11 @@ class AppTheme {
       primary: AppColors.primary,
     ),
     scaffoldBackgroundColor: AppColors.bgLight,
+    textSelectionTheme: const TextSelectionThemeData(
+      cursorColor: Color(0xFF1F3D3D),
+      selectionColor: Color(0x33FFC09D),
+      selectionHandleColor: Color(0xFFFFC09D),
+    ),
     textTheme: GoogleFonts.interTextTheme().copyWith(
       displayLarge: GoogleFonts.inter(fontWeight: FontWeight.w700),
       headlineMedium: GoogleFonts.inter(fontWeight: FontWeight.w600),
