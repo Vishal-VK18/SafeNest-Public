@@ -245,11 +245,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () {
+                              onPressed: () async {
+                                final email = _emailCtrl.text.trim();
+                                if (email.isEmpty) {
+                                  setState(() => _errorMsg = 'Enter your email to reset password.');
+                                  return;
+                                }
+                                final error = await AuthService.sendPasswordReset(email);
+                                if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Password reset link will be sent to your email.'),
+                                  SnackBar(
+                                    content: Text(error ?? 'Password reset email sent to $email'),
+                                    backgroundColor: error != null ? Colors.red : Colors.green,
                                   ),
                                 );
                               },

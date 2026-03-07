@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'auth/login_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'home_wrapper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,15 +44,16 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (kDevMode) {
-      // ── DEV MODE: skip all auth, go straight to dashboard ──────────────
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeDashboardScreen()),
       );
       return;
     }
 
-    // ── PRODUCTION: full auth flow ────────────────────────────────────────
-    final isLoggedIn = StorageService.isLoggedIn;
+    // Check Firebase Auth state — source of truth
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final isLoggedIn = firebaseUser != null;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) =>

@@ -8,12 +8,17 @@ import 'services/notification_service.dart';
 import 'services/ble_service.dart';
 import 'services/background_service.dart';
 import 'services/system_service.dart';
+import 'services/firebase_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
 import 'utils/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_dashboard_screen.dart';
 import 'screens/device_connection_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/emergency_alert_screen.dart';
+import 'screens/sos_sent_screen.dart';
 import 'core/constants/route_constants.dart';
 import 'core/navigation/page_transitions.dart';
 import 'screens/logs/heart_rate_log_screen.dart';
@@ -25,6 +30,12 @@ import 'screens/sim_module_status_screen.dart';
 import 'screens/journey/hydration_tracker/hydration_tracker_screen.dart';
 import 'screens/journey/sleep_oxygen_screen.dart';
 import 'screens/journey/appointment_details_screen.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint('FCM background message: ${message.messageId}');
+}
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -43,6 +54,19 @@ Future<void> main() async {
     } catch (e) {
       debugPrint('SafeNest: StorageService.init() failed: $e');
     }
+
+    // Firebase init
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('SafeNest: Firebase initialized');
+    } catch (e) {
+      debugPrint('SafeNest: Firebase init failed: $e');
+    }
+
+    // FCM background handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     // Init foreground task communication port before runApp
     FlutterForegroundTask.initCommunicationPort();
@@ -94,7 +118,14 @@ Future<void> _initServicesAsync() async {
     debugPrint('SafeNest: BackgroundService.start() failed: $e');
   }
 
-  // 5. Battery optimization — ask only once ever
+  // 5. Firebase FCM
+  try {
+    await FirebaseService.instance.initFCM();
+  } catch (e) {
+    debugPrint('SafeNest: FCM init failed: $e');
+  }
+
+  // 6. Battery optimization — ask only once ever
   try {
     final alreadyAsked = StorageService.getBatteryPermissionAsked();
     if (!alreadyAsked) {
@@ -134,6 +165,7 @@ class SafeNestApp extends StatelessWidget {
         RouteConstants.hydrationReminders: (context) => const HydrationTrackerScreen(initialPage: 2),
         RouteConstants.sleep:              (context) => const SleepOxygenScreen(),
         RouteConstants.appointment:        (context) => const AppointmentDetailsScreen(),
+        RouteConstants.sosSent:            (context) => const SosSentScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == RouteConstants.heartRate) {
