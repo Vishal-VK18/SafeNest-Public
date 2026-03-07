@@ -472,29 +472,22 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // diffused-bg
+        // diffused-bg base (Same as Dashboard)
         Positioned.fill(
           child: Container(
             decoration: const BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.topLeft,
-                radius: 1.5,
-                colors: [Color(0xFFFFC09D), Colors.white],
-                stops: [0.0, 0.5],
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)], // peach to blush
               ),
             ),
           ),
         ),
+        // blur overlay
         Positioned.fill(
           child: Container(
-            decoration: const BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.bottomRight,
-                radius: 1.5,
-                colors: [Color(0xFFFFCACB), Colors.white],
-                stops: [0.0, 0.5],
-              ),
-            ),
+            color: const Color(0xFFFFFDFB).withOpacity(0.4),
           ),
         ),
         
@@ -515,7 +508,7 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
                         child: const Icon(Icons.chevron_left, color: Color(0xFF475569)),
                       ),
                     ),
-                    Text('Hydration Statistics', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+                    Text('Hydration Statistics', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF181818))),
                     Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), shape: BoxShape.circle, boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)]),
@@ -542,7 +535,7 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
                           onTap: () => setState(() => _selectedStatTab = 0),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: _selectedStatTab == 0 ? BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x63FFC09D), blurRadius: 14, offset: Offset(0, 4))]) : null,
+                            decoration: _selectedStatTab == 0 ? BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x1AFFC09D), blurRadius: 14, offset: Offset(0, 4))]) : null,
                             child: Center(child: Text('Day', style: GoogleFonts.inter(fontSize: 14, fontWeight: _selectedStatTab == 0 ? FontWeight.bold : FontWeight.w500, color: _selectedStatTab == 0 ? const Color(0xFF1E293B) : const Color(0xFF64748B)))),
                           ),
                         ),
@@ -552,7 +545,7 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
                           onTap: () => setState(() => _selectedStatTab = 1),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: _selectedStatTab == 1 ? BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x63FFC09D), blurRadius: 14, offset: Offset(0, 4))]) : null,
+                            decoration: _selectedStatTab == 1 ? BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x1AFFC09D), blurRadius: 14, offset: Offset(0, 4))]) : null,
                             child: Center(child: Text('Week', style: GoogleFonts.inter(fontSize: 14, fontWeight: _selectedStatTab == 1 ? FontWeight.bold : FontWeight.w500, color: _selectedStatTab == 1 ? const Color(0xFF1E293B) : const Color(0xFF64748B)))),
                           ),
                         ),
@@ -562,7 +555,7 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
                           onTap: () => setState(() => _selectedStatTab = 2),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: _selectedStatTab == 2 ? BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x63FFC09D), blurRadius: 14, offset: Offset(0, 4))]) : null,
+                            decoration: _selectedStatTab == 2 ? BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x1AFFC09D), blurRadius: 14, offset: Offset(0, 4))]) : null,
                             child: Center(child: Text('Month', style: GoogleFonts.inter(fontSize: 14, fontWeight: _selectedStatTab == 2 ? FontWeight.bold : FontWeight.w500, color: _selectedStatTab == 2 ? const Color(0xFF1E293B) : const Color(0xFF64748B)))),
                           ),
                         ),
@@ -582,9 +575,9 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFFDF9).withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(32),
-                          border: Border.all(color: Colors.white.withOpacity(0.8)),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25, offset: const Offset(0, 8))],
                         ),
                         child: Column(
                           children: [
@@ -679,7 +672,7 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
           child: Container(
             height: 176 * heightFactor,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)]),
+              gradient: const LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Color(0xFFFFC09D), Color(0xFFFFB6A5)]),
               borderRadius: BorderRadius.circular(999),
             ),
           ),
@@ -692,9 +685,9 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFDF9).withOpacity(0.7),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.8)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25, offset: const Offset(0, 8))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

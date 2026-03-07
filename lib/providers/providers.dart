@@ -88,6 +88,7 @@ class PregnancyNotifier extends StateNotifier<PregnancyModel> {
           startDate:  StorageService.pregnancyStartDate,
           manualWeek: StorageService.pregnancyWeek,
           userName:   StorageService.userName,
+          age:        27,
         ));
 
   Future<void> updateStartDate(DateTime date) async {
@@ -273,10 +274,34 @@ final appointmentProvider = StateNotifierProvider<AppointmentNotifier, List<Appo
   return AppointmentNotifier();
 });
 
+final nextUpcomingAppointmentProvider = Provider<AppointmentModel?>((ref) {
+  final appointments = ref.watch(appointmentProvider);
+  try {
+    return appointments.firstWhere((a) => !a.isCompleted);
+  } catch (_) {
+    return null;
+  }
+});
+
 class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
-  AppointmentNotifier() : super(StorageService.appointments != null 
-    ? AppointmentModel.decodeList(StorageService.appointments!)
-    : []);
+  AppointmentNotifier() : super(_initialAppointments());
+
+  static List<AppointmentModel> _initialAppointments() {
+    final stored = StorageService.appointments;
+    if (stored != null) {
+      final list = AppointmentModel.decodeList(stored);
+      if (list.isNotEmpty) return list;
+    }
+    return [
+      AppointmentModel(
+        id: 'default_1',
+        title: 'Checkup',
+        doctorName: 'Dr. Sarah Collins',
+        location: 'Obstetrician',
+        date: DateTime.now().add(const Duration(days: 7)),
+      ),
+    ];
+  }
 
   void addAppointment(AppointmentModel appt) {
     state = [...state, appt];

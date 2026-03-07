@@ -4,9 +4,10 @@ import '../utils/blush_theme.dart';
 import '../services/storage_service.dart';
 import '../utils/dev_config.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'auth/login_screen.dart';
+import '../core/constants/route_constants.dart';
 import 'home_dashboard_screen.dart';
 import 'home_wrapper.dart';
+import 'onboarding/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -51,12 +52,17 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     // ── PRODUCTION: full auth flow ────────────────────────────────────────
+    final isOnboardingComplete = StorageService.isOnboardingComplete;
+    if (!isOnboardingComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      );
+      return;
+    }
+
     final isLoggedIn = StorageService.isLoggedIn;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) =>
-            isLoggedIn ? const HomeWrapper() : const LoginScreen(),
-      ),
+    Navigator.of(context).pushReplacementNamed(
+      isLoggedIn ? RouteConstants.dashboard : RouteConstants.getStarted,
     );
   }
 

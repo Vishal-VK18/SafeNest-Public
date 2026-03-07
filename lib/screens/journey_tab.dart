@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import '../providers/providers.dart';
 import '../core/constants/route_constants.dart';
+import 'journey/appointment_details_screen.dart';
 
 class JourneyTab extends ConsumerWidget {
   final void Function(int)? onSwitchTab;
@@ -69,7 +71,7 @@ class JourneyTab extends ConsumerWidget {
                             if (onSwitchTab != null) {
                               onSwitchTab!(0);
                             } else {
-                              Navigator.maybePop(context);
+                              Navigator.pop(context);
                             }
                           },
                           child: Container(
@@ -81,7 +83,7 @@ class JourneyTab extends ConsumerWidget {
                         ),
                         Expanded(
                           child: Text(
-                            "${pregnancy.userName.isNotEmpty ? pregnancy.userName : 'SARAH'}'S UNIFIED WELLNESS JOURNEY",
+                            "PREGNANCY JOURNEY",
                             textAlign: TextAlign.center,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
@@ -278,50 +280,60 @@ class JourneyTab extends ConsumerWidget {
                   ),
 
                   // Next Checkup
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, RouteConstants.appointment),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 40),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFFDFB).withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white.withOpacity(0.8)),
-                        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 30, offset: Offset(0, 10))],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final nextAppt = ref.watch(nextUpcomingAppointmentProvider);
+                      if (nextAppt == null) return const SizedBox.shrink();
+
+                      return GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AppointmentDetailsScreen()),
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 40),
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFDFB).withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white.withOpacity(0.8)),
+                            boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 30, offset: Offset(0, 10))],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(
-                                width: 48, height: 48,
-                                decoration: BoxDecoration(color: const Color(0xFFFFCACB).withOpacity(0.2), borderRadius: BorderRadius.circular(18)),
-                                child: const Icon(Icons.medical_services, color: Color(0xFFFFCACB), size: 24),
-                              ),
-                              const SizedBox(width: 20),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Row(
                                 children: [
-                                  Text('NEXT CHECKUP', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF181818).withOpacity(0.3), letterSpacing: 1.5)),
-                                  const SizedBox(height: 4),
-                                  Text('Dr. Helena Smith', style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFF181818))),
-                                  const SizedBox(height: 4),
-                                  Row(
+                                  Container(
+                                    width: 48, height: 48,
+                                    decoration: BoxDecoration(color: const Color(0xFFFFCACB).withOpacity(0.2), borderRadius: BorderRadius.circular(18)),
+                                    child: const Icon(Icons.medical_services, color: Color(0xFFFFCACB), size: 24),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Oct 27, 2026', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF181818).withOpacity(0.4))),
-                                      Container(margin: const EdgeInsets.symmetric(horizontal: 8), width: 4, height: 4, decoration: BoxDecoration(color: const Color(0xFF181818).withOpacity(0.2), shape: BoxShape.circle)),
-                                      Text('3 Days Remaining', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFFFC09D))),
+                                      Text('NEXT CHECKUP', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF181818).withOpacity(0.3), letterSpacing: 1.5)),
+                                      const SizedBox(height: 4),
+                                      Text(nextAppt.doctorName.isNotEmpty ? nextAppt.doctorName : 'Add Doctor Name', style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFF181818))),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Text(DateFormat('MMM d, yyyy').format(nextAppt.date), style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF181818).withOpacity(0.4))),
+                                          Container(margin: const EdgeInsets.symmetric(horizontal: 8), width: 4, height: 4, decoration: BoxDecoration(color: const Color(0xFF181818).withOpacity(0.2), shape: BoxShape.circle)),
+                                          Text('${nextAppt.date.difference(DateTime.now()).inDays} Days Remaining', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFFFC09D))),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                 ],
                               ),
+                              Icon(Icons.chevron_right, color: const Color(0xFF181818).withOpacity(0.2)),
                             ],
                           ),
-                          Icon(Icons.chevron_right, color: const Color(0xFF181818).withOpacity(0.2)),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
 
                   // Motivational Footer

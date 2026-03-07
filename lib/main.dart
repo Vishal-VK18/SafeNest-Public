@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,12 +11,16 @@ import 'services/background_service.dart';
 import 'services/system_service.dart';
 import 'utils/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/auth/get_started_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/create_account_screen.dart';
 import 'screens/home_dashboard_screen.dart';
 import 'screens/device_connection_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/emergency_alert_screen.dart';
 import 'core/constants/route_constants.dart';
 import 'core/navigation/page_transitions.dart';
+import 'screens/alerts/alerts_screen.dart';
 import 'screens/logs/heart_rate_log_screen.dart';
 import 'screens/logs/temperature_log_page.dart';
 import 'screens/logs/fall_event_log_screen.dart';
@@ -82,14 +87,22 @@ Future<void> _initServicesAsync() async {
 
   // 3. BLE
   try {
-    await BleService.instance.start();
+    if (Platform.isAndroid || Platform.isIOS) {
+      await BleService.instance.start();
+    } else {
+      debugPrint('SafeNest: BLE skipped on desktop platform.');
+    }
   } catch (e) {
     debugPrint('SafeNest: BleService.start() failed: $e');
   }
 
   // 4. Start native background service
   try {
-    await BackgroundService.start();
+    if (Platform.isAndroid || Platform.isIOS) {
+      await BackgroundService.start();
+    } else {
+      debugPrint('SafeNest: BackgroundService skipped on desktop platform.');
+    }
   } catch (e) {
     debugPrint('SafeNest: BackgroundService.start() failed: $e');
   }
@@ -122,13 +135,18 @@ class SafeNestApp extends StatelessWidget {
       theme: AppTheme.light,
       initialRoute: RouteConstants.splash,
       routes: {
+        '/': (context) => const SplashScreen(),
         RouteConstants.splash: (context) => const SplashScreen(),
+        RouteConstants.getStarted: (context) => const GetStartedScreen(),
+        RouteConstants.login: (context) => const LoginScreen(),
+        RouteConstants.createAccount: (context) => const CreateAccountScreen(),
         RouteConstants.home:    (context) => const HomeDashboardScreen(),
         RouteConstants.dashboard: (context) => const HomeDashboardScreen(),
         RouteConstants.journey:  (context) => const HomeDashboardScreen(),
         RouteConstants.devices: (context) => const DeviceConnectionScreen(),
-        RouteConstants.profile: (context) => const ProfileScreen(),
+        RouteConstants.profile: (context) => const SettingsScreen(),
         RouteConstants.alerts:  (context) => const EmergencyAlertScreen(),
+        RouteConstants.alertsList: (context) => const AlertsScreen(),
         RouteConstants.hydration:          (context) => const HydrationTrackerScreen(initialPage: 0),
         RouteConstants.hydrationStats:     (context) => const HydrationTrackerScreen(initialPage: 1),
         RouteConstants.hydrationReminders: (context) => const HydrationTrackerScreen(initialPage: 2),

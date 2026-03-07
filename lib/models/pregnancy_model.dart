@@ -3,17 +3,20 @@
 class PregnancyModel {
   final DateTime? startDate;
   final String userName;
+  final int age;
   final int? manualWeek; // Fallback if no start date
 
   const PregnancyModel({
     this.startDate,
     this.userName   = 'Sarah',
+    this.age        = 27,
     this.manualWeek,
   });
 
   factory PregnancyModel.defaults() => PregnancyModel(
     startDate: DateTime.now().subtract(const Duration(days: 154)), // ~22 weeks ago
     userName:  'Sarah',
+    age:       27,
   );
 
   // ─── Calculations ──────────────────────────────────────────────────────────
@@ -77,10 +80,11 @@ class PregnancyModel {
 
   bool get hasData => startDate != null || manualWeek != null;
 
-  PregnancyModel copyWith({DateTime? startDate, String? userName, int? manualWeek}) =>
+  PregnancyModel copyWith({DateTime? startDate, String? userName, int? age, int? manualWeek}) =>
       PregnancyModel(
         startDate:  startDate  ?? this.startDate,
         userName:   userName   ?? this.userName,
+        age:        age        ?? this.age,
         manualWeek: manualWeek ?? this.manualWeek,
       );
 }

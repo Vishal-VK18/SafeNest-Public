@@ -101,174 +101,170 @@ class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         padding: const EdgeInsets.fromLTRB(28, 12, 28, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 28),
+              const SizedBox(height: 28),
 
-            // Header row with icon
-            Row(
-              children: [
-                Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFC09D).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(14),
+              // Header row with icon
+              Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFC09D).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      isEdit ? Icons.edit : Icons.person_add,
+                      color: const Color(0xFFFFC09D),
+                      size: 22,
+                    ),
                   ),
-                  child: Icon(
-                    isEdit ? Icons.edit : Icons.person_add,
-                    color: const Color(0xFFFFC09D),
-                    size: 22,
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEdit ? 'Edit Contact' : 'Add New Contact',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF181818),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        isEdit ? 'Update details below' : 'Add a reliable person to reach out to',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: const Color(0xFF181818).withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+
+              _buildLabel('NAME'),
+              const SizedBox(height: 8),
+              _buildTextField(
+                controller: _nameController,
+                hintText: 'e.g. John Doe',
+                textCapitalization: TextCapitalization.words,
+                prefixIcon: Icon(Icons.person_outline, color: const Color(0xFF181818).withOpacity(0.4), size: 20),
+              ),
+              const SizedBox(height: 24),
+
+              _buildLabel('RELATION'),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFAF8),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFFC09D).withOpacity(0.3), width: 1.5),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedRelationship,
+                    isExpanded: true,
+                    dropdownColor: Colors.white,
+                    items: _relationships.map((rel) {
+                      return DropdownMenuItem(
+                        value: rel,
+                        child: Text(rel, style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF181818))),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedRelationship = val),
+                    icon: Icon(Icons.expand_more, color: const Color(0xFF181818).withOpacity(0.4)),
+                    hint: Text(
+                      'Select Relationship',
+                      style: GoogleFonts.inter(color: const Color(0xFF181818).withOpacity(0.3), fontSize: 15),
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isEdit ? 'Edit Contact' : 'Add New Contact',
+              ),
+              const SizedBox(height: 24),
+
+              _buildLabel('PHONE NUMBER'),
+              const SizedBox(height: 8),
+              _buildTextField(
+                controller: _phoneController,
+                hintText: 'e.g. +1 234 567 8900',
+                keyboardType: TextInputType.phone,
+                prefixIcon: Icon(Icons.phone_outlined, color: const Color(0xFF181818).withOpacity(0.4), size: 20),
+              ),
+              const SizedBox(height: 40),
+
+              // Save Button
+              GestureDetector(
+                onTap: _saveContact,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF181818),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF181818).withOpacity(0.15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      isEdit ? 'Update Contact' : 'Save Contact',
                       style: GoogleFonts.inter(
-                        fontSize: 20,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF181818),
-                        letterSpacing: -0.3,
+                        color: Colors.white,
                       ),
                     ),
-                    Text(
-                      isEdit
-                          ? 'Update emergency contact details.'
-                          : 'This person will be alerted in emergencies.',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Cancel
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Center(
+                    child: Text(
+                      'Cancel',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                         color: const Color(0xFF181818).withOpacity(0.4),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-
-            // Full Name field
-            _buildLabel('FULL NAME'),
-            const SizedBox(height: 8),
-            _buildTextField(
-              controller: _nameController,
-              hintText: 'e.g. John Doe',
-              keyboardType: TextInputType.name,
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 20),
-
-            // Phone Number field
-            _buildLabel('PHONE NUMBER'),
-            const SizedBox(height: 8),
-            _buildTextField(
-              controller: _phoneController,
-              hintText: '+1 (555) 000-0000',
-              keyboardType: TextInputType.phone,
-              prefixIcon: Icon(Icons.call_outlined, color: const Color(0xFFFFC09D), size: 20),
-            ),
-            const SizedBox(height: 20),
-
-            // Relationship dropdown
-            _buildLabel('RELATIONSHIP'),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFAF8),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFFFC09D).withOpacity(0.3), width: 1.5),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedRelationship,
-                  isExpanded: true,
-                  dropdownColor: Colors.white,
-                  items: _relationships.map((rel) {
-                    return DropdownMenuItem(
-                      value: rel,
-                      child: Text(rel, style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF181818))),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedRelationship = val),
-                  icon: Icon(Icons.expand_more, color: const Color(0xFF181818).withOpacity(0.4)),
-                  hint: Text(
-                    'Select Relationship',
-                    style: GoogleFonts.inter(color: const Color(0xFF181818).withOpacity(0.3), fontSize: 15),
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 28),
-
-            // Save button — gradient to match Blush theme
-            GestureDetector(
-              onTap: _saveContact,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFFC09D).withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    isEdit ? 'Update Contact' : 'Save Contact',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Cancel
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Center(
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF181818).withOpacity(0.4),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

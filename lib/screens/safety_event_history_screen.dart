@@ -54,7 +54,7 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null,
+            onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.chevron_left, color: AppColors.primary),
             style: IconButton.styleFrom(
               backgroundColor: AppColors.primary.withOpacity(0.1),
