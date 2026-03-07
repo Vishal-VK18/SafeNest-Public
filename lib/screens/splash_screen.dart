@@ -44,7 +44,6 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (kDevMode) {
-      // ── DEV MODE: skip all auth, go straight to dashboard ──────────────
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeDashboardScreen()),
       );

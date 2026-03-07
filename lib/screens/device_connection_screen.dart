@@ -1,5 +1,6 @@
 // lib/screens/device_connection_screen.dart
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -18,6 +19,286 @@ class DeviceConnectionScreen extends ConsumerStatefulWidget {
 }
 
 class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen> {
+  List<ScanResult> _scanResults = [];
+  bool _isScanning = false;
+  bool _scanTriggered = false;
+
+  Future<void> _startScan() async {
+    if (_isScanning) return;
+    setState(() {
+      _isScanning = true;
+      _scanTriggered = true;
+      _scanResults = [];
+    });
+
+    try {
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 10),
+      );
+
+      FlutterBluePlus.scanResults.listen((results) {
+        if (mounted) {
+          setState(() {
+            _scanResults = results
+                .where((r) => r.device.platformName.isNotEmpty)
+                .toList();
+          });
+        }
+      });
+
+      await Future.delayed(const Duration(seconds: 10));
+    } catch (e) {
+      debugPrint('[Scan] Error: $e');
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
+  }
+
+  Widget _buildScanSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'NEARBY DEVICES',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                  color: const Color(0xFF181818).withOpacity(0.3),
+                ),
+              ),
+              if (_isScanning)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: const Color(0xFFFFC09D),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Scanning...',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFFFC09D),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Results — only show after scan triggered
+          if (!_scanTriggered)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.bluetooth_searching, size: 40, color: Colors.grey[300]),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Tap Scan to find nearby devices',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.grey[400],
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_scanTriggered && _scanResults.isEmpty && !_isScanning)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.bluetooth_disabled, size: 40, color: Colors.grey[300]),
+                    const SizedBox(height: 10),
+                    Text(
+                      'No devices found\nTap Scan to try again',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.grey[400],
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _scanResults.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[100]),
+              itemBuilder: (context, i) {
+                final r = _scanResults[i];
+                final name = r.device.platformName.isNotEmpty
+                    ? r.device.platformName
+                    : 'Unknown Device';
+                final isSafeNest = name.toLowerCase().contains('safenest');
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: isSafeNest
+                              ? const Color(0xFFFFC09D).withOpacity(0.1)
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          isSafeNest ? Icons.watch_rounded : Icons.bluetooth,
+                          color: isSafeNest
+                              ? const Color(0xFFFFC09D)
+                              : Colors.grey[400],
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF181818),
+                              ),
+                            ),
+                            Text(
+                              '${r.device.remoteId.str} · ${r.rssi} dBm',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () async {
+                          await FlutterBluePlus.stopScan();
+                          await ref.read(bleServiceProvider).connectToDevice(r.device);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+                            ),
+                            borderRadius: BorderRadius.circular(999),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFC09D).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'Connect',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+          const SizedBox(height: 16),
+
+          // Scan button
+          InkWell(
+            onTap: _isScanning ? null : _startScan,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                gradient: _isScanning
+                    ? null
+                    : const LinearGradient(
+                        colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+                      ),
+                color: _isScanning ? Colors.grey[300] : null,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: _isScanning ? null : [
+                  BoxShadow(
+                    color: const Color(0xFFFFC09D).withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isScanning)
+                    const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2,
+                      ),
+                    )
+                  else
+                    const Icon(Icons.bluetooth_searching, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isScanning ? 'Scanning...' : 'Scan for Devices',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!Platform.isAndroid && !Platform.isIOS) {
@@ -139,6 +420,10 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                           status: deviceStatus.simUnit.status,
                           onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
                         ),
+                        const SizedBox(height: 24),
+
+                        // Nearby devices scan section
+                        _buildScanSection(),
                         const SizedBox(height: 24),
 
                         // System Toggles
