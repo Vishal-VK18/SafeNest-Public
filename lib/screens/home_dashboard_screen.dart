@@ -107,34 +107,37 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final selected = _selectedTab == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTab = index),
-      child: Container(
-        width: 64,
-        height: 58,
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF181818) : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: selected ? const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))] : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: selected ? Colors.white : const Color(0xFFFFC09D),
-              size: 20,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTab = index),
+        child: Container(
+          height: 58,
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF181818) : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: selected ? const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))] : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
                 color: selected ? Colors.white : const Color(0xFFFFC09D),
+                size: 20,
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 8.5, // Slightly smaller to ensure fit
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : const Color(0xFFFFC09D),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -341,12 +341,19 @@ class DashboardTab extends ConsumerWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Fall Detection', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF181818))),
-                                        Text(health.fallDetected ? 'Fall detected!' : 'All systems operational', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF181818).withOpacity(0.4))),
-                                      ],
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Fall Detection', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF181818))),
+                                          Text(
+                                            health.fallDetected ? 'Fall detected!' : 'Systems operational',
+                                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF181818).withOpacity(0.4)),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                     Row(
                                       children: [

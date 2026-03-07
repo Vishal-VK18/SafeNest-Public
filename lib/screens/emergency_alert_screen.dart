@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/providers.dart';
 import '../utils/app_theme.dart';
+import '../core/constants/route_constants.dart';
 
 class EmergencyAlertScreen extends ConsumerStatefulWidget {
   const EmergencyAlertScreen({super.key});
@@ -17,7 +18,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
     with TickerProviderStateMixin {
   int     _countdown = 30;
   Timer?  _timer;
-  bool    _helpSent  = false;
+  bool    _dismissed = false;
 
   late AnimationController _pulseCtrl;
 
@@ -31,6 +32,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
+      if (_dismissed) return;
       if (_countdown <= 0) {
         _sendHelp();
       } else {
@@ -46,15 +48,26 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
     super.dispose();
   }
 
-  void _sendHelp() {
+  void _safePop() {
+    if (_dismissed) return;
+    if (!mounted) return;
+    _dismissed = true;
     _timer?.cancel();
-    setState(() => _helpSent = true);
+    Navigator.of(context).pop();
+  }
+
+  void _sendHelp() {
+    if (_dismissed) return;
+    _timer?.cancel();
+    _dismissed = true;
+    Navigator.of(context).pushReplacementNamed(RouteConstants.sosSent);
   }
 
   void _iAmSafe() {
+    if (_dismissed) return;
     _timer?.cancel();
     ref.read(healthDataProvider.notifier).reset();
-    Navigator.of(context).pop();
+    _safePop();
   }
 
   @override
@@ -64,7 +77,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
     // Listen to fall detection becoming false to potentially auto-dismiss if user is safe
     ref.listen(fallAlertActiveProvider, (prev, next) {
       if (next == false && prev == true) {
-        Navigator.of(context).pop();
+        _safePop();
       }
     });
 
@@ -145,7 +158,6 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                     ),
                   ),
 
-                  if (!_helpSent)
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -289,64 +301,15 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen>
                           ),
                         ),
                       ],
-                    )
-                  else
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 80, height: 80,
-                          decoration: BoxDecoration(
-                            color: AppColors.statusGreen, shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.sos, color: Colors.white, size: 44),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Help Alert Sent!',
-                          style: GoogleFonts.inter(
-                            fontSize: 28, fontWeight: FontWeight.w800,
-                            color: AppColors.dangerRed,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            'Your emergency contacts have been notified.\nStay calm, help is on the way.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(fontSize: 15, color: Colors.grey[600]),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        // Return to Dashboard placed right below confirmation text
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(56),
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              shape: const StadiumBorder(),
-                            ),
-                            child: Text(
-                              'Return to Dashboard',
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                 ],
               ),
             ),
 
             // Action buttons
-            if (!_helpSent)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                child: Column(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+              child: Column(
                   children: [
                     // SEND HELP
                     AnimatedBuilder(

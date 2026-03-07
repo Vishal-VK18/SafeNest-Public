@@ -8,6 +8,7 @@ class RouteConstants {
   static const String devices     = '/devices';
   static const String profile     = '/profile';
   static const String alerts      = '/alerts';
+  static const String sosSent     = '/sos-sent';
   
   // Logs
   static const String heartRate      = '/heart-rate';
