@@ -10,4 +10,4 @@
 //   • Full flow: Splash → Login → HomeWrapper (biometric) → HomeDashboardScreen.
 
 // ignore_for_file: constant_identifier_names
-const bool kDevMode = true;
+const bool kDevMode = false;

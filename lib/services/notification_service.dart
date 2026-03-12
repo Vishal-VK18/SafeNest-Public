@@ -2,6 +2,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/constants.dart';
+import 'storage_service.dart';
+
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -96,17 +98,28 @@ class NotificationService {
     body:  'Temperature is ${temp.toStringAsFixed(1)}°C — below 35°C threshold.',
   );
 
-  static Future<void> showDeviceDisconnected(String deviceName) => _show(
-    id:    AppConstants.notifIdDisconnect,
-    title: '📡 Device Disconnected',
-    body:  '$deviceName has lost connection. Attempting to reconnect...',
-  );
+  static Future<void> showDeviceDisconnected(String deviceName) async {
+    // Only notify if user has previously paired a device
+    final hasPairedDevice = StorageService.pairedWatchId != null &&
+        StorageService.pairedWatchId!.isNotEmpty;
+    if (!hasPairedDevice) return;
+    await _show(
+      id:    AppConstants.notifIdDisconnect,
+      title: '📡 Device Disconnected',
+      body:  '$deviceName has lost connection. Attempting to reconnect...',
+    );
+  }
 
-  static Future<void> showSimError() => _show(
-    id:    AppConstants.notifIdSimError,
-    title: '🔴 SIM Module Error',
-    body:  'The SIM communication unit is unreachable. Emergency SMS alerts may not work.',
-  );
+  static Future<void> showSimError() async {
+    final hasPairedDevice = StorageService.pairedWatchId != null &&
+        StorageService.pairedWatchId!.isNotEmpty;
+    if (!hasPairedDevice) return;
+    await _show(
+      id:    AppConstants.notifIdSimError,
+      title: '🔴 SIM Module Error',
+      body:  'The SIM communication unit is unreachable. Emergency SMS alerts may not work.',
+    );
+  }
 
   static Future<void> cancelAll() => _plugin.cancelAll();
 }

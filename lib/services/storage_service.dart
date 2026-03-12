@@ -10,6 +10,9 @@ class StorageService {
     await Hive.initFlutter();
     _settings     = await Hive.openBox(AppConstants.hiveBoxSettings);
     _healthCache  = await Hive.openBox(AppConstants.hiveBoxHealthCache);
+    // Force wipe all saved safety events on every cold start
+    // This ensures no old fake/stale data ever shows
+    await _settings.put(AppConstants.keySafetyHistory, <String>[]);
   }
 
   // â”€â”€â”€ Paired device IDs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -145,6 +148,10 @@ class StorageService {
     // Keep only the last 50 events
     if (list.length > 50) list.removeLast();
     await _settings.put(AppConstants.keySafetyHistory, list);
+  }
+
+  static Future<void> clearSafetyHistory() async {
+    await _settings.put(AppConstants.keySafetyHistory, <String>[]);
   }
 
   static bool get isOnboardingComplete =>

@@ -92,19 +92,31 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
     setState(() => _isLoading = true);
 
-    // Register through AuthService (handles hashing + all persistence)
-    await AuthService.register(
-      name:                _nameCtrl.text.trim(),
-      email:               _emailCtrl.text.trim(),
-      phone:               _phoneCtrl.text.trim(),
-      password:            _passwordCtrl.text,
-      pregnancyStartDate:  _pregnancyStartDate,
-      bloodGroup:          _selectedBloodGroup,
-      age:                 int.tryParse(_ageCtrl.text.trim()),
-      emergencyContact:    _emergencyCtrl.text.isNotEmpty
+    final error = await AuthService.register(
+      name:               _nameCtrl.text.trim(),
+      email:              _emailCtrl.text.trim(),
+      phone:              _phoneCtrl.text.trim(),
+      password:           _passwordCtrl.text,
+      pregnancyStartDate: _pregnancyStartDate,
+      bloodGroup:         _selectedBloodGroup,
+      age:                int.tryParse(_ageCtrl.text.trim()),
+      emergencyContact:   _emergencyCtrl.text.isNotEmpty
           ? '${_emergencyCtrl.text.trim()} | ${_emergencyPhoneCtrl.text.trim()}'
           : null,
     );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     // Update pregnancy provider
     ref.read(pregnancyProvider.notifier).updateName(_nameCtrl.text.trim());
@@ -112,10 +124,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       ref.read(pregnancyProvider.notifier).updateStartDate(_pregnancyStartDate!);
     }
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // Navigate to dashboard, replacing the create-account screen in the stack
     Navigator.of(context).pushReplacementNamed('/home');
   }
 

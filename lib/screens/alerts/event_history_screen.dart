@@ -6,7 +6,8 @@ import '../../models/safety_event_model.dart';
 import '../../providers/providers.dart';
 
 class EventHistoryScreen extends ConsumerStatefulWidget {
-  const EventHistoryScreen({super.key});
+  final VoidCallback? onBack;
+  const EventHistoryScreen({super.key, this.onBack});
 
   @override
   ConsumerState<EventHistoryScreen> createState() => _EventHistoryScreenState();
@@ -67,7 +68,13 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildCircleButton(Icons.chevron_left, () => Navigator.pop(context)),
+          _buildCircleButton(Icons.chevron_left, () {
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          }),
           Text(
             'Event History',
             style: GoogleFonts.inter(

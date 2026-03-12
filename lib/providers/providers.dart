@@ -20,6 +20,9 @@ import '../models/temperature_entry.dart';
 // â”€â”€â”€ BLE Service singleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final bleServiceProvider = Provider<BleService>((_) => BleService.instance);
 
+/// Shared tab index for HomeDashboardScreen — readable/writable from any screen.
+final selectedTabProvider = StateProvider<int>((ref) => 0);
+
 // â”€â”€â”€ Health data stream â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /// Streams the latest parsed BLE health packet.
 final healthStreamProvider = StreamProvider<HealthDataModel>((ref) {
@@ -34,17 +37,42 @@ final healthDataProvider = StateNotifierProvider<HealthDataNotifier, HealthDataM
 
 class HealthDataNotifier extends StateNotifier<HealthDataModel> {
   final Ref _ref;
+  HealthDataModel? _last;
+
   HealthDataNotifier(this._ref) : super(HealthDataModel.empty()) {
-    // Subscribe to real BLE stream only
     _ref.read(bleServiceProvider).healthStream.listen((packet) {
-      state = packet;
+      // Only update state if values actually changed — prevents unnecessary rebuilds
+      if (_last == null ||
+          _last!.temperature != packet.temperature ||
+          _last!.heartRate != packet.heartRate ||
+          _last!.fallDetected != packet.fallDetected ||
+          _last!.tempAlert != packet.tempAlert ||
+          _last!.simSignal != packet.simSignal ||
+          _last!.networkType != packet.networkType ||
+          _last!.bandBattery != packet.bandBattery ||
+          _last!.simBattery != packet.simBattery) {
+        _last = packet;
+        state = packet;
+
+        // Flush any buffered safety events into history
+        _ref.read(bleServiceProvider).flushEvents((type, desc) async {
+          await _ref.read(safetyHistoryProvider.notifier).addEvent(
+                type: type,
+                description: desc,
+                status: SafetyEventStatus.resolved,
+              );
+        });
+      }
     });
   }
 
-  void reset() => state = HealthDataModel.empty();
+  void reset() {
+    _last = null;
+    state = HealthDataModel.empty();
+  }
 }
 
-// â”€â”€â”€ Device status stream â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Device status stream ────────────────────────────────────────────────────────
 final deviceStreamProvider = StreamProvider<DeviceStatusModel>((ref) {
   return ref.read(bleServiceProvider).deviceStream;
 });
@@ -56,9 +84,21 @@ final deviceStatusProvider =
 
 class DeviceStatusNotifier extends StateNotifier<DeviceStatusModel> {
   final Ref _ref;
+  DeviceStatusModel? _last;
+
   DeviceStatusNotifier(this._ref) : super(DeviceStatusModel.initial()) {
     _ref.read(bleServiceProvider).deviceStream.listen((status) {
-      state = status;
+      // Only push update if connection status or signal actually changed
+      if (_last == null ||
+          _last!.watch.status != status.watch.status ||
+          _last!.watch.signalLevel != status.watch.signalLevel ||
+          _last!.watch.batteryPercent != status.watch.batteryPercent ||
+          _last!.simUnit.status != status.simUnit.status ||
+          _last!.simUnit.batteryPercent != status.simUnit.batteryPercent ||
+          _last!.watch.lastSeen != status.watch.lastSeen) {
+        _last = status;
+        state = status;
+      }
     });
   }
 
@@ -468,7 +508,21 @@ class SafetyHistoryNotifier extends StateNotifier<List<SafetyEventModel>> {
   void _load() {
     try {
       final historyJson = StorageService.safetyHistory;
-      state = historyJson.map((s) => SafetyEventModel.fromJson(jsonDecode(s) as Map<String, dynamic>)).toList();
+      if (historyJson.isEmpty) {
+        state = [];
+        return;
+      }
+      state = historyJson
+          .map((s) {
+            try {
+              return SafetyEventModel.fromJson(
+                  jsonDecode(s) as Map<String, dynamic>);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<SafetyEventModel>()
+          .toList();
     } catch (_) {
       state = [];
     }
@@ -488,20 +542,40 @@ class SafetyHistoryNotifier extends StateNotifier<List<SafetyEventModel>> {
       location: location,
       status: status,
     );
-
     state = [event, ...state];
     await StorageService.addSafetyEvent(jsonEncode(event.toJson()));
   }
 
-  Future<void> recordFromHealth(HealthDataModel health, SafetyEventType type) async {
+  Future<void> recordFromHealth(
+      HealthDataModel health, SafetyEventType type) async {
+    String description;
+    switch (type) {
+      case SafetyEventType.fall:
+        description = 'Fall detected.'
+            '${health.temperature > 0 ? ' Temp: ${health.temperature.toStringAsFixed(1)}°C.' : ''}'
+            '${health.heartRate > 0 ? ' HR: ${health.heartRate} BPM.' : ''}';
+        break;
+      case SafetyEventType.sos:
+        description = 'Emergency SOS triggered manually.'
+            '${health.temperature > 0 ? ' Temp: ${health.temperature.toStringAsFixed(1)}°C.' : ''}'
+            '${health.heartRate > 0 ? ' HR: ${health.heartRate} BPM.' : ''}';
+        break;
+      default:
+        description = 'Safety event recorded.';
+    }
     await addEvent(
       type: type,
-      description: type == SafetyEventType.fall 
-          ? "Fall detected near your location." 
-          : "Emergency SOS triggered manually.",
-      location: health.gpsLat != 0 ? "${health.gpsLat.toStringAsFixed(4)}, ${health.gpsLng.toStringAsFixed(4)}" : "Unknown Location",
+      description: description,
+      location: health.gpsLat != 0
+          ? '${health.gpsLat.toStringAsFixed(4)}, ${health.gpsLng.toStringAsFixed(4)}'
+          : 'Unknown Location',
       status: SafetyEventStatus.resolved,
     );
+  }
+
+  Future<void> clearAll() async {
+    state = [];
+    await StorageService.clearSafetyHistory();
   }
 }
 

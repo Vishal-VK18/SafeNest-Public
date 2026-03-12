@@ -1,5 +1,6 @@
 // lib/screens/device_connection_screen.dart
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -18,6 +19,286 @@ class DeviceConnectionScreen extends ConsumerStatefulWidget {
 }
 
 class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen> {
+  List<ScanResult> _scanResults = [];
+  bool _isScanning = false;
+  bool _scanTriggered = false;
+
+  Future<void> _startScan() async {
+    if (_isScanning) return;
+    setState(() {
+      _isScanning = true;
+      _scanTriggered = true;
+      _scanResults = [];
+    });
+
+    try {
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 10),
+      );
+
+      FlutterBluePlus.scanResults.listen((results) {
+        if (mounted) {
+          setState(() {
+            _scanResults = results
+                .where((r) => r.device.platformName.isNotEmpty)
+                .toList();
+          });
+        }
+      });
+
+      await Future.delayed(const Duration(seconds: 10));
+    } catch (e) {
+      debugPrint('[Scan] Error: $e');
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
+  }
+
+  Widget _buildScanSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'NEARBY DEVICES',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                  color: const Color(0xFF181818).withOpacity(0.3),
+                ),
+              ),
+              if (_isScanning)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: const Color(0xFFFFC09D),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Scanning...',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFFFC09D),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Results — only show after scan triggered
+          if (!_scanTriggered)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.bluetooth_searching, size: 40, color: Colors.grey[300]),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Tap Scan to find nearby devices',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.grey[400],
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_scanTriggered && _scanResults.isEmpty && !_isScanning)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.bluetooth_disabled, size: 40, color: Colors.grey[300]),
+                    const SizedBox(height: 10),
+                    Text(
+                      'No devices found\nTap Scan to try again',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.grey[400],
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _scanResults.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[100]),
+              itemBuilder: (context, i) {
+                final r = _scanResults[i];
+                final name = r.device.platformName.isNotEmpty
+                    ? r.device.platformName
+                    : 'Unknown Device';
+                final isSafeNest = name.toLowerCase().contains('safenest');
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: isSafeNest
+                              ? const Color(0xFFFFC09D).withOpacity(0.1)
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          isSafeNest ? Icons.watch_rounded : Icons.bluetooth,
+                          color: isSafeNest
+                              ? const Color(0xFFFFC09D)
+                              : Colors.grey[400],
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF181818),
+                              ),
+                            ),
+                            Text(
+                              '${r.device.remoteId.str} · ${r.rssi} dBm',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () async {
+                          await FlutterBluePlus.stopScan();
+                          await ref.read(bleServiceProvider).connectToDevice(r.device);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+                            ),
+                            borderRadius: BorderRadius.circular(999),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFC09D).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'Connect',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+          const SizedBox(height: 16),
+
+          // Scan button
+          InkWell(
+            onTap: _isScanning ? null : _startScan,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                gradient: _isScanning
+                    ? null
+                    : const LinearGradient(
+                        colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+                      ),
+                color: _isScanning ? Colors.grey[300] : null,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: _isScanning ? null : [
+                  BoxShadow(
+                    color: const Color(0xFFFFC09D).withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isScanning)
+                    const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2,
+                      ),
+                    )
+                  else
+                    const Icon(Icons.bluetooth_searching, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isScanning ? 'Scanning...' : 'Scan for Devices',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!Platform.isAndroid && !Platform.isIOS) {
@@ -126,19 +407,36 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                         // Watch Card
                         _buildDeviceCard(
                           type: 'Wearable',
+                          deviceName: 'SafeNest',
                           icon: Icons.watch_rounded,
                           status: deviceStatus.watch.status,
                           onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                          batteryPct: ref.watch(healthDataProvider).bandBattery,
+                          signalPct: deviceStatus.watch.signalLevel,
                         ),
                         const SizedBox(height: 24),
 
-                        // SIM Card
-                        _buildDeviceCard(
-                          type: 'SIM Module',
-                          icon: Icons.sim_card_rounded,
-                          status: deviceStatus.simUnit.status,
-                          onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                        ),
+                        // SIM Card — only show if band is connected (SIM is part of band)
+                        if (deviceStatus.watch.status == ConnectionStatus.connected) ...[
+                          _buildDeviceCard(
+                            type: 'SIM Module',
+                            deviceName: 'SafeNest SIM',
+                            icon: Icons.sim_card_rounded,
+                            status: ref.watch(healthDataProvider).simSignal > 0
+                                ? ConnectionStatus.connected
+                                : ConnectionStatus.disconnected,
+                            onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                            batteryPct: ref.watch(healthDataProvider).simBattery,
+                            signalPct: deviceStatus.simUnit.signalLevel,
+                          ),
+                          const SizedBox(height: 24),
+                        ] else ...[
+                          _buildSimOfflineCard(),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Nearby devices scan section
+                        _buildScanSection(),
                         const SizedBox(height: 24),
 
                         // System Toggles
@@ -196,9 +494,12 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
 
   Widget _buildDeviceCard({
     required String type,
+    required String deviceName,
     required IconData icon,
     required ConnectionStatus status,
     required VoidCallback onReconnect,
+    required int batteryPct,
+    int signalPct = 0,
   }) {
     final isConnected = status == ConnectionStatus.connected;
     final isConnecting = status == ConnectionStatus.connecting || status == ConnectionStatus.scanning;
@@ -265,7 +566,7 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isConnected ? 'Active Pair' : 'Not Paired',
+                        isConnected ? deviceName : 'Not Paired',
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -300,7 +601,133 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
               ),
             ],
           ),
-          
+                 if (isConnected) ...[
+            const SizedBox(height: 16),
+            // Signal + Battery grid — matches HTML layout
+            Row(
+              children: [
+                // Signal tile — show for both Wearable and SIM Module
+                if (type == 'Wearable' || type == 'SIM Module') ...[
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.network_cell_rounded,
+                            color: signalPct > 75
+                                ? const Color(0xFF3DBB7C)
+                                : signalPct > 50
+                                    ? const Color(0xFFFFC09D)
+                                    : signalPct > 25
+                                        ? Colors.orange[400]
+                                        : Colors.red[400],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'SIGNAL',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                  color: const Color(0xFF181818).withOpacity(0.35),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                signalPct > 75
+                                    ? 'Excellent'
+                                    : signalPct > 50
+                                        ? 'Good'
+                                        : signalPct > 25
+                                            ? 'Fair'
+                                            : signalPct > 0
+                                                ? 'Poor'
+                                                : 'No Signal',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF181818),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                // Battery tile
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          batteryPct > 80
+                              ? Icons.battery_full_rounded
+                              : batteryPct > 50
+                                  ? Icons.battery_5_bar_rounded
+                                  : batteryPct > 20
+                                      ? Icons.battery_3_bar_rounded
+                                      : batteryPct > 0
+                                          ? Icons.battery_alert_rounded
+                                          : Icons.battery_unknown_rounded,
+                          color: batteryPct > 50
+                              ? const Color(0xFF3DBB7C)
+                              : batteryPct > 20
+                                  ? const Color(0xFFFFC09D)
+                                  : batteryPct > 0
+                                      ? Colors.red[400]
+                                      : Colors.grey[400],
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'BATTERY',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                                color: const Color(0xFF181818).withOpacity(0.35),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              batteryPct > 0 ? '$batteryPct%' : 'Reading...',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF181818),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (!isConnected) ...[
             const SizedBox(height: 24),
             Container(
@@ -353,6 +780,99 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSimOfflineCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.sim_card_rounded, color: Colors.grey[400], size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SIM MODULE',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
+                    color: const Color(0xFF181818).withOpacity(0.3),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Not Connected',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF181818),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Connect the band to see SIM status',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF181818).withOpacity(0.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6, height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'OFFLINE',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -1,4 +1,3 @@
-// lib/screens/safety_event_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,21 +9,27 @@ class SafetyEventHistoryScreen extends ConsumerStatefulWidget {
   const SafetyEventHistoryScreen({super.key});
 
   @override
-  ConsumerState<SafetyEventHistoryScreen> createState() => _SafetyEventHistoryScreenState();
+  ConsumerState<SafetyEventHistoryScreen> createState() =>
+      _SafetyEventHistoryScreenState();
 }
 
-class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScreen> {
+class _SafetyEventHistoryScreenState
+    extends ConsumerState<SafetyEventHistoryScreen> {
   String _activeFilter = 'All';
 
   @override
   Widget build(BuildContext context) {
     final history = ref.watch(safetyHistoryProvider);
-    
+
     final filteredHistory = history.where((event) {
       if (_activeFilter == 'All') return true;
-      if (_activeFilter == 'Alerts') return event.type == SafetyEventType.fall || event.type == SafetyEventType.sos;
-      if (_activeFilter == 'System') return event.type == SafetyEventType.system;
-      if (_activeFilter == 'Vitals') return event.type == SafetyEventType.vitals;
+      if (_activeFilter == 'Alerts')
+        return event.type == SafetyEventType.fall ||
+            event.type == SafetyEventType.sos;
+      if (_activeFilter == 'System')
+        return event.type == SafetyEventType.system;
+      if (_activeFilter == 'Vitals')
+        return event.type == SafetyEventType.vitals;
       return true;
     }).toList();
 
@@ -100,6 +105,40 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
     );
   }
 
+  void _showClearDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Clear History',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Text(
+          'This removes all saved events. Only new real events from your watch will appear going forward.',
+          style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: Colors.grey[500])),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await ref
+                  .read(safetyHistoryProvider.notifier)
+                  .clearAll();
+            },
+            child: Text('Clear All',
+                style: GoogleFonts.inter(
+                    color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFilterChips() {
     final filters = ['All', 'Alerts', 'System', 'Vitals'];
     return Padding(
@@ -167,7 +206,6 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
   }
 
   Widget _buildTimeline(List<SafetyEventModel> events) {
-    // Group by day for Today/Yesterday headers
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -179,14 +217,27 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
         final event = events[i];
         bool showHeader = false;
         String headerText = '';
-        
-        DateTime eventDay = DateTime(event.timestamp.year, event.timestamp.month, event.timestamp.day);
-        
-        if (i == 0 || DateTime(events[i-1].timestamp.year, events[i-1].timestamp.month, events[i-1].timestamp.day) != eventDay) {
+
+        final eventDay = DateTime(
+            event.timestamp.year,
+            event.timestamp.month,
+            event.timestamp.day);
+
+        if (i == 0 ||
+            DateTime(
+                    events[i - 1].timestamp.year,
+                    events[i - 1].timestamp.month,
+                    events[i - 1].timestamp.day) !=
+                eventDay) {
           showHeader = true;
-          if (eventDay == today) headerText = 'TODAY';
-          else if (eventDay == yesterday) headerText = 'YESTERDAY';
-          else headerText = DateFormat('MMMM d').format(eventDay).toUpperCase();
+          if (eventDay == today) {
+            headerText = 'TODAY';
+          } else if (eventDay == yesterday) {
+            headerText = 'YESTERDAY';
+          } else {
+            headerText =
+                DateFormat('MMMM d').format(eventDay).toUpperCase();
+          }
         }
 
         return Column(
@@ -199,8 +250,10 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
                   Text(
                     headerText,
                     style: GoogleFonts.inter(
-                      fontSize: 12, fontWeight: FontWeight.bold,
-                      color: Colors.grey[400], letterSpacing: 1.5,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[400],
+                      letterSpacing: 1.5,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -216,7 +269,8 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
     );
   }
 
-  Widget _buildTimelineItem(SafetyEventModel event, {required bool isLast}) {
+  Widget _buildTimelineItem(SafetyEventModel event,
+      {required bool isLast}) {
     IconData icon;
     Color iconColor;
     Color bgIconColor;
@@ -247,7 +301,8 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
           Column(
             children: [
               Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: bgIconColor,
                   shape: BoxShape.circle,
@@ -289,7 +344,9 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
                     children: [
                       Text(
                         _getEventTitle(event),
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold),
                       ),
                       Text(
                         DateFormat('dd MMM yyyy • HH:mm').format(event.timestamp),
@@ -305,7 +362,8 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
                   if (event.status == SafetyEventStatus.resolved) ...[
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.green.shade50,
                         borderRadius: BorderRadius.circular(10),
@@ -313,11 +371,19 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+                          Container(
+                              width: 4,
+                              height: 4,
+                              decoration: const BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle)),
                           const SizedBox(width: 4),
                           Text(
                             'RESOLVED',
-                            style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.green.shade600),
+                            style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade600),
                           ),
                         ],
                       ),
@@ -334,10 +400,14 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
 
   String _getEventTitle(SafetyEventModel event) {
     switch (event.type) {
-      case SafetyEventType.fall: return 'Fall Detected';
-      case SafetyEventType.sos:  return 'Manual SOS Alert';
-      case SafetyEventType.system: return 'System Alert';
-      case SafetyEventType.vitals: return 'Vitals Alert';
+      case SafetyEventType.fall:
+        return 'Fall Detected';
+      case SafetyEventType.sos:
+        return 'Manual SOS Alert';
+      case SafetyEventType.system:
+        return 'System Alert';
+      case SafetyEventType.vitals:
+        return 'Vitals Alert';
     }
   }
 }
