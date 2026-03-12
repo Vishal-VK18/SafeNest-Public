@@ -1,5 +1,6 @@
 // lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/blush_theme.dart';
 import '../services/storage_service.dart';
 import '../utils/dev_config.dart';
@@ -50,18 +51,29 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // ── PRODUCTION: full auth flow ────────────────────────────────────────
     final isOnboardingComplete = StorageService.isOnboardingComplete;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final isLoggedIn = firebaseUser != null;
+
     if (!isOnboardingComplete) {
+      // First ever launch — show onboarding then login
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingScreen()),
       );
       return;
     }
 
-    final isLoggedIn = StorageService.isLoggedIn;
-    Navigator.of(context).pushReplacementNamed(
-      isLoggedIn ? RouteConstants.dashboard : RouteConstants.getStarted,
+    if (isLoggedIn) {
+      // Already logged in — show single launch page then dashboard
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeWrapper()),
+      );
+      return;
+    }
+
+    // Signed out — show onboarding again
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
     );
   }
 

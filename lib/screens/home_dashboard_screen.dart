@@ -1,4 +1,4 @@
-﻿// lib/screens/home_dashboard_screen.dart
+// lib/screens/home_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,7 +20,6 @@ class HomeDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
-  int _selectedTab = 0;
   bool _sosVisible = false;
 
   @override
@@ -37,6 +36,8 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       }
     });
 
+    final _selectedTab = ref.watch(selectedTabProvider);
+
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       body: SafeArea(
@@ -46,9 +47,11 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
               index: _selectedTab,
               children: [
                 const DashboardTab(),
-                JourneyTab(onSwitchTab: (i) => setState(() => _selectedTab = i)),
+                JourneyTab(onSwitchTab: (i) => ref.read(selectedTabProvider.notifier).state = i),
                 const DeviceConnectionScreen(),
-                const EventHistoryScreen(),
+                EventHistoryScreen(
+                  onBack: () => ref.read(selectedTabProvider.notifier).state = 0,
+                ),
                 const SettingsScreen(),
               ],
             ),
@@ -96,10 +99,10 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   }
 
   Widget _buildNavItem(int index, IconData icon, String label) {
-    final selected = _selectedTab == index;
+    final selected = ref.watch(selectedTabProvider) == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = index),
+        onTap: () => ref.read(selectedTabProvider.notifier).state = index,
         child: Container(
           height: 58,
           decoration: BoxDecoration(

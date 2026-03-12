@@ -10,6 +10,7 @@ import '../utils/constants.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import 'background_service.dart';
+import '../models/safety_event_model.dart';
 
 /// Central BLE manager for SafeNest.
 ///
@@ -44,6 +45,10 @@ class BleService {
   DateTime?         _lastPacketTime;
   bool              _destroyed = false;
   bool              _isScanning = false;
+
+  DateTime? _lastDisconnectNotifTime;
+  DateTime? _lastTempNotifTime;
+  bool _tempAlertActive = false;
 
   final List<ScanResult> _scanResults = [];
 
@@ -314,16 +319,10 @@ class BleService {
         ? (int.tryParse(parts[2].trim()) ?? 0)
         : 0;
 
-    // Part 3 — SIM signal raw value from AT+CSQ (0-31)
-    // Convert CSQ value to 0-4 scale for display
+    // Part 3 — SIM signal 0-100 percent sent directly from ESP
     int simSignal = 0;
     if (parts.length >= 4) {
-      final csq = int.tryParse(parts[3].trim()) ?? 0;
-      if (csq >= 20) simSignal = 4;
-      else if (csq >= 15) simSignal = 3;
-      else if (csq >= 10) simSignal = 2;
-      else if (csq > 0) simSignal = 1;
-      else simSignal = 0;
+      simSignal = int.tryParse(parts[3].trim()) ?? 0;
     }
 
     // Part 4 — network type string: "4G", "3G", "2G", "—"
@@ -331,12 +330,24 @@ class BleService {
         ? parts[4].trim()
         : _lastHealth.networkType;
 
+    // Part 5 — band battery percent (0-100)
+    final bandBattery = parts.length > 5
+        ? (int.tryParse(parts[5].trim()) ?? _lastHealth.bandBattery)
+        : _lastHealth.bandBattery;
+
+    // Part 6 — SIM battery percent (0-100)
+    final simBattery = parts.length > 6
+        ? (int.tryParse(parts[6].trim()) ?? _lastHealth.simBattery)
+        : _lastHealth.simBattery;
+
     final model = _lastHealth.copyWith(
       temperature: temp,
       fallDetected: fall,
       tempAlert: tempAlert,
       simSignal: simSignal,
       networkType: networkType,
+      bandBattery: bandBattery,
+      simBattery: simBattery,
       receivedAt: DateTime.now(),
     );
     _onPacketReceived(model);
@@ -348,19 +359,31 @@ class BleService {
     _lastHealth = model;
     if (!_healthCtrl.isClosed) _healthCtrl.add(model);
 
-    // Update battery from BLE packet if provided
-    if (model.watchBattery > 0) {
+    // Update watch — battery + signal together
+    if (_deviceStatus.watch.isConnected) {
       _updateDeviceStatus(_deviceStatus.copyWith(
         watch: _deviceStatus.watch.copyWith(
-          batteryPercent: model.watchBattery,
+          batteryPercent: model.bandBattery > 0
+              ? model.bandBattery
+              : _deviceStatus.watch.batteryPercent,
+          signalLevel: model.simSignal > 0
+              ? model.simSignal
+              : _deviceStatus.watch.signalLevel,
           lastSeen: DateTime.now(),
         ),
       ));
     }
-    if (model.simBattery > 0) {
+
+    // Update SIM unit — battery + signal together
+    if (_deviceStatus.watch.isConnected) {
       _updateDeviceStatus(_deviceStatus.copyWith(
         simUnit: _deviceStatus.simUnit.copyWith(
-          batteryPercent: model.simBattery,
+          batteryPercent: model.simBattery > 0
+              ? model.simBattery
+              : _deviceStatus.simUnit.batteryPercent,
+          signalLevel: model.simSignal > 0
+              ? model.simSignal
+              : _deviceStatus.simUnit.signalLevel,
           lastSeen: DateTime.now(),
         ),
       ));
@@ -372,22 +395,35 @@ class BleService {
       StorageService.setLastGps(model.gpsLat, model.gpsLng);
     }
 
-    // Check thresholds → notifications
-    if (model.fallDetected) {
+    // Fall — fires every time a NEW fall is detected (leading edge only)
+    if (model.fallDetected && !_lastHealth.fallDetected) {
       NotificationService.showFallAlert();
       BackgroundService.showFallNotification();
+      _recordEvent(SafetyEventType.fall,
+          'Fall detected. Temp: ${model.temperature.toStringAsFixed(1)}°C.'
+          '${model.heartRate > 0 ? ' HR: ${model.heartRate} BPM.' : ''}');
     }
-    if (!model.isHeartRateNormal && model.heartRate > 0) {
+
+    if (!model.isHeartRateNormal && model.heartRate > 0 &&
+        (model.heartRate != _lastHealth.heartRate)) {
       NotificationService.showAbnormalHeartRate(model.heartRate);
+      _recordEvent(SafetyEventType.vitals,
+          'Abnormal heart rate: ${model.heartRate} BPM detected.');
     }
-    
-    // High temp from native flag
-    if (model.tempAlert == 1) {
+
+    // High temp — 33°C threshold, notify continuously on each new trigger
+    final isHighTemp = model.temperature >= AppConstants.tempSafetyThreshold
+        || model.tempAlert == 1;
+    if (isHighTemp && !_tempAlertActive) {
+      _tempAlertActive = true;
       NotificationService.showHighTemperature(model.temperature);
       BackgroundService.showTempNotification(model.temperature);
+    } else if (!isHighTemp) {
+      _tempAlertActive = false;
     }
-    // Low temp from native flag
-    if (model.tempAlert == -1) {
+
+    // Low temp — notify continuously on each new trigger
+    if (model.tempAlert == -1 && _lastHealth.tempAlert != -1) {
       NotificationService.showLowTemperature(model.temperature);
     }
   }
@@ -413,17 +449,66 @@ class BleService {
     debugPrint('[BLE] Watch disconnected');
     _heartbeatTimer?.cancel();
     _watchDevice = null;
-    _updateWatchStatus(ConnectionStatus.disconnected);
-    NotificationService.showDeviceDisconnected('SafeNest Watch');
+    // Reset health data battery fields
+    _lastHealth = _lastHealth.copyWith(bandBattery: 0, simBattery: 0);
+    if (!_healthCtrl.isClosed) _healthCtrl.add(_lastHealth);
+    // Clear battery + signal so UI shows disconnected state, not stale values
+    _updateDeviceStatus(_deviceStatus.copyWith(
+      watch: _deviceStatus.watch.copyWith(
+        status: ConnectionStatus.disconnected,
+        batteryPercent: 0,
+        signalLevel: 0,
+      ),
+    ));
+    _maybeSendDisconnectNotif('SafeNest Watch');
     _scheduleReconnect(() => _startAutoScan());
   }
 
   void _onSimDisconnected() {
     debugPrint('[BLE] SIM unit disconnected');
     _simDevice = null;
-    _updateSimStatus(ConnectionStatus.disconnected);
-    NotificationService.showSimError();
+    // Clear battery so UI shows disconnected state, not stale values
+    _updateDeviceStatus(_deviceStatus.copyWith(
+      simUnit: _deviceStatus.simUnit.copyWith(
+        status: ConnectionStatus.disconnected,
+        batteryPercent: 0,
+        signalLevel: 0,
+      ),
+    ));
+    _maybeSendDisconnectNotif('SafeNest SIM');
     _scheduleReconnect(() => _startAutoScan());
+  }
+
+  void _maybeSendDisconnectNotif(String deviceName) {
+    final hasPaired = StorageService.pairedWatchId != null &&
+        StorageService.pairedWatchId!.isNotEmpty;
+    if (!hasPaired) return;
+
+    final now = DateTime.now();
+    if (_lastDisconnectNotifTime == null ||
+        now.difference(_lastDisconnectNotifTime!).inMinutes >=
+            AppConstants.disconnectCooldownMin) {
+      _lastDisconnectNotifTime = now;
+      NotificationService.showDeviceDisconnected(deviceName);
+    } else {
+      debugPrint('[BLE] Disconnect notif suppressed — cooldown active');
+    }
+  }
+
+  void _recordEvent(SafetyEventType type, String description) {
+    // Use a global container reference to add to safety history
+    _eventBuffer.add(_PendingEvent(type: type, description: description));
+  }
+
+  final List<_PendingEvent> _eventBuffer = [];
+
+  /// Called by the app's ProviderContainer to flush buffered events into state.
+  Future<void> flushEvents(
+      Future<void> Function(SafetyEventType, String) onEvent) async {
+    for (final e in List.from(_eventBuffer)) {
+      await onEvent(e.type, e.description);
+      _eventBuffer.remove(e);
+    }
   }
 
   // ─── Auto-reconnect ──────────────────────────────────────────────────────────
@@ -471,4 +556,10 @@ class BleService {
     if (rssi >= -85) return 50;
     return 25;
   }
+}
+
+class _PendingEvent {
+  final SafetyEventType type;
+  final String description;
+  const _PendingEvent({required this.type, required this.description});
 }

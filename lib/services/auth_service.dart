@@ -162,6 +162,10 @@ class AuthService {
     await _auth.signOut();
     await GoogleSignIn().signOut();
     await StorageService.setIsLoggedIn(false);
+    // Reset onboarding so slides show again after sign out
+    await StorageService.setOnboardingComplete(false);
+    // Reset battery permission flag so it asks again
+    await StorageService.setBatteryPermissionAsked(false);
     debugPrint('[Auth] Logged out');
   }
 

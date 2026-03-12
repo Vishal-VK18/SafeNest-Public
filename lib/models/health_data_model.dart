@@ -8,6 +8,7 @@ class HealthDataModel {
   final bool fallDetected;
   final int pregnancyWeek;
   final int watchBattery;
+  final int bandBattery;
   final int simBattery;
   final int simSignal;       // 0–4
   final String networkType;  // "2G" | "3G" | "4G" | "LTE-M" | "N/A"
@@ -23,6 +24,7 @@ class HealthDataModel {
     required this.fallDetected,
     required this.pregnancyWeek,
     required this.watchBattery,
+    this.bandBattery = 0,
     required this.simBattery,
     required this.simSignal,
     required this.networkType,
@@ -49,6 +51,7 @@ class HealthDataModel {
       fallDetected:  (json['fall_detected']  as bool?)            ?? false,
       pregnancyWeek: (json['pregnancy_week'] as num?)?.toInt()    ?? 0,
       watchBattery:  (json['watch_battery']  as num?)?.toInt()    ?? 0,
+      bandBattery:   (json['band_battery']   as num?)?.toInt()    ?? 0,
       simBattery:    (json['sim_battery']    as num?)?.toInt()    ?? 0,
       simSignal:     (json['sim_signal']     as num?)?.toInt()    ?? 0,
       networkType:   (json['network_type']   as String?)          ?? 'N/A',
@@ -75,6 +78,7 @@ class HealthDataModel {
     'fall_detected':  fallDetected,
     'pregnancy_week': pregnancyWeek,
     'watch_battery':  watchBattery,
+    'band_battery':   bandBattery,
     'sim_battery':    simBattery,
     'sim_signal':     simSignal,
     'network_type':   networkType,
@@ -93,6 +97,7 @@ class HealthDataModel {
     fallDetected:  false,
     pregnancyWeek: 0,
     watchBattery:  0,
+    bandBattery:   0,
     simBattery:    0,
     simSignal:     0,
     networkType:   'N/A',
@@ -145,6 +150,7 @@ class HealthDataModel {
     bool? fallDetected,
     int? pregnancyWeek,
     int? watchBattery,
+    int? bandBattery,
     int? simBattery,
     int? simSignal,
     String? networkType,
@@ -159,6 +165,7 @@ class HealthDataModel {
     fallDetected:  fallDetected  ?? this.fallDetected,
     pregnancyWeek: pregnancyWeek ?? this.pregnancyWeek,
     watchBattery:  watchBattery  ?? this.watchBattery,
+    bandBattery:   bandBattery   ?? this.bandBattery,
     simBattery:    simBattery    ?? this.simBattery,
     simSignal:     simSignal     ?? this.simSignal,
     networkType:   networkType   ?? this.networkType,
