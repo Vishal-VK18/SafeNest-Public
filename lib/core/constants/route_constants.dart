@@ -14,6 +14,7 @@ class RouteConstants {
   static const String alertsList  = '/alerts-list';
   
   // Logs
+  static const String vitals         = '/vitals';
   static const String heartRate      = '/heart-rate';
   static const String heartRateLog   = '/heart-rate-log';
   static const String temperature    = '/temperature';

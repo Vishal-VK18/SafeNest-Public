@@ -1,4 +1,5 @@
 ﻿import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_data_model.dart';
@@ -9,7 +10,9 @@ import '../models/hydration_model.dart';
 import '../models/sleep_oxygen_model.dart';
 import '../models/appointment_model.dart';
 import '../models/safety_event_model.dart';
+import '../models/sleep_tracker_model.dart';
 import '../services/ble_service.dart';
+import '../services/sleep_reminder_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../models/temperature_entry.dart';
@@ -541,6 +544,116 @@ class TemperatureLogNotifier extends StateNotifier<List<TemperatureEntry>> {
       state = updated.sublist(0, _maxEntries);
     } else {
       state = updated;
+    }
+  }
+}
+
+// ─── Sleep Tracker ─────────────────────────────────────────────────────────────────
+final sleepTrackerProvider =
+    StateNotifierProvider<SleepTrackerNotifier, SleepTrackerState>(
+  (ref) => SleepTrackerNotifier(),
+);
+
+class SleepTrackerNotifier extends StateNotifier<SleepTrackerState> {
+  SleepTrackerNotifier() : super(const SleepTrackerState()) {
+    _load();
+  }
+
+  // ── Load persisted state ──────────────────────────────────────────────────
+  void _load() {
+    state = state.copyWith(
+      history: _loadHistory(),
+      reminder: _loadReminder(),
+    );
+  }
+
+  List<SleepSession> _loadHistory() {
+    final raw = StorageService.sleepData;
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final list = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+      return list.map(SleepSession.fromJson).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  SleepReminderSettings _loadReminder() {
+    final raw = StorageService.sleepReminderSettings;
+    if (raw == null || raw.isEmpty) return const SleepReminderSettings();
+    try {
+      return SleepReminderSettings.fromJson(
+          jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return const SleepReminderSettings();
+    }
+  }
+
+  Future<void> _saveHistory(List<SleepSession> sessions) =>
+      StorageService.setSleepData(
+          jsonEncode(sessions.map((s) => s.toJson()).toList()));
+
+  Future<void> _saveReminder(SleepReminderSettings r) =>
+      StorageService.setSleepReminderSettings(jsonEncode(r.toJson()));
+
+  // ── Tracking controls ─────────────────────────────────────────────────────
+  void startTracking() {
+    state = state.copyWith(
+      status: SleepTrackingStatus.tracking,
+      sessionStart: DateTime.now(),
+    );
+  }
+
+  void pauseTracking() =>
+      state = state.copyWith(status: SleepTrackingStatus.paused);
+
+  void resumeTracking() =>
+      state = state.copyWith(status: SleepTrackingStatus.tracking);
+
+  Future<SleepSession?> stopTracking() async {
+    final start = state.sessionStart;
+    if (start == null) return null;
+
+    final session = SleepSession(startTime: start, endTime: DateTime.now());
+    if (session.totalSleep.inMinutes < 5) {
+      state = state.copyWith(
+          status: SleepTrackingStatus.idle, clearSessionStart: true);
+      return null;
+    }
+
+    final history = [session, ...state.history].take(7).toList();
+    state = state.copyWith(
+      status: SleepTrackingStatus.idle,
+      history: history,
+      clearSessionStart: true,
+    );
+    await _saveHistory(history);
+    return session;
+  }
+
+  // ── Reminder settings ─────────────────────────────────────────────────────
+  Future<void> setReminderEnabled(bool enabled) async {
+    final updated = state.reminder.copyWith(enabled: enabled);
+    state = state.copyWith(reminder: updated);
+    await _saveReminder(updated);
+
+    final svc = SleepReminderService.instance;
+    await svc.init();
+    if (enabled) {
+      await svc.scheduleDaily(updated.reminderTime);
+    } else {
+      await svc.cancelReminder();
+    }
+  }
+
+  Future<void> setReminderTime(TimeOfDay time) async {
+    final updated = state.reminder.copyWith(reminderTime: time);
+    state = state.copyWith(reminder: updated);
+    await _saveReminder(updated);
+
+    if (updated.enabled) {
+      final svc = SleepReminderService.instance;
+      await svc.scheduleDaily(time);
     }
   }
 }

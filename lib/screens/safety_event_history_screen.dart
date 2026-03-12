@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/safety_event_model.dart';
 import '../providers/providers.dart';
-import '../utils/app_theme.dart';
 
 class SafetyEventHistoryScreen extends ConsumerStatefulWidget {
   const SafetyEventHistoryScreen({super.key});
@@ -30,18 +29,32 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
     }).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            _buildFilterChips(),
-            Expanded(
-              child: filteredHistory.isEmpty 
-                ? _buildEmptyState()
-                : _buildTimeline(filteredHistory),
-            ),
-          ],
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFFC09D),
+              Color(0xFFFFCACB),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context),
+              _buildFilterChips(),
+              Expanded(
+                child: filteredHistory.isEmpty 
+                  ? _buildEmptyState()
+                  : _buildTimeline(filteredHistory),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -49,31 +62,37 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.chevron_left, color: AppColors.primary),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              shape: const CircleBorder(),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.4),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.chevron_left, color: Color(0xFF181818), size: 28),
             ),
           ),
           Text(
             'Event History',
             style: GoogleFonts.inter(
               fontSize: 20, fontWeight: FontWeight.bold,
-              color: const Color(0xFF1C1C1E),
+              color: const Color(0xFF181818),
             ),
           ),
-          IconButton(
-            onPressed: () {}, // Filter logic
-            icon: const Icon(Icons.tune, color: AppColors.primary),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              shape: const CircleBorder(),
+          GestureDetector(
+            onTap: () {},
+            child: Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.4),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.tune, color: Color(0xFF181818), size: 20),
             ),
           ),
         ],
@@ -83,30 +102,44 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
 
   Widget _buildFilterChips() {
     final filters = ['All', 'Alerts', 'System', 'Vitals'];
-    return SizedBox(
-      height: 50,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        scrollDirection: Axis.horizontal,
-        itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final selected = _activeFilter == filters[i];
-          return GestureDetector(
-            onTap: () => setState(() => _activeFilter = filters[i]),
-            child: Chip(
-              label: Text(filters[i]),
-              labelStyle: GoogleFonts.inter(
-                fontSize: 14, fontWeight: FontWeight.w500,
-                color: selected ? Colors.white : AppColors.primary,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SizedBox(
+        height: 50,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          scrollDirection: Axis.horizontal,
+          itemCount: filters.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, i) {
+            final selected = _activeFilter == filters[i];
+            return GestureDetector(
+              onTap: () => setState(() => _activeFilter = filters[i]),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: selected ? const Color(0xFFFFC09D) : Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(99),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  filters[i],
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    color: selected ? Colors.white : const Color(0xFF181818),
+                  ),
+                ),
               ),
-              backgroundColor: selected ? AppColors.primary : AppColors.primary.withOpacity(0.1),
-              shape: const StadiumBorder(),
-              side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -115,12 +148,18 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.history, size: 64, color: Colors.grey[300]),
+          Icon(Icons.history_outlined, size: 56, color: const Color(0xFF6F6F6F).withOpacity(0.5)),
           const SizedBox(height: 16),
           Text(
-            'No safety events recorded.',
-            style: GoogleFonts.inter(color: Colors.grey[500], fontSize: 16),
+            'No events recorded',
+            style: GoogleFonts.inter(color: const Color(0xFF6F6F6F), fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'All clear! The wearable is monitoring.',
+            style: GoogleFonts.inter(color: const Color(0xFF6F6F6F), fontSize: 13),
           ),
         ],
       ),
@@ -235,11 +274,11 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
               margin: const EdgeInsets.only(bottom: 24),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white.withOpacity(0.75),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
                 ],
               ),
               child: Column(
@@ -253,15 +292,15 @@ class _SafetyEventHistoryScreenState extends ConsumerState<SafetyEventHistoryScr
                         style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        DateFormat('hh:mm a').format(event.timestamp),
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400], fontWeight: FontWeight.w500),
+                        DateFormat('dd MMM yyyy • HH:mm').format(event.timestamp),
+                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6F6F6F), fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     event.description,
-                    style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600], height: 1.4),
+                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6F6F6F), height: 1.4),
                   ),
                   if (event.status == SafetyEventStatus.resolved) ...[
                     const SizedBox(height: 12),

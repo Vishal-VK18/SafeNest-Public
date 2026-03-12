@@ -52,6 +52,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/login_illustration.png # ADDED FROM: C:\SafeNest app ui\Safenest blush ui\login page
+    - assets/ui/create_account/
 
 flutter_launcher_icons:
   android: true
