@@ -31,6 +31,8 @@ class AppConstants {
   static const int notifIdDisconnect  = 1004;
   static const int notifIdSimError    = 1005;
   static const int notifIdLowTemperature = 1006;
+  static const double tempSafetyThreshold   = 33.0;
+  static const int    disconnectCooldownMin = 20;
 
   // ─── Hive box names ─────────────────────────────────────────────────────────
   static const String hiveBoxSettings    = 'settings';

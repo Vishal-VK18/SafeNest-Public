@@ -407,20 +407,33 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                         // Watch Card
                         _buildDeviceCard(
                           type: 'Wearable',
+                          deviceName: 'SafeNest',
                           icon: Icons.watch_rounded,
                           status: deviceStatus.watch.status,
                           onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                          batteryPct: ref.watch(healthDataProvider).bandBattery,
+                          signalPct: deviceStatus.watch.signalLevel,
                         ),
                         const SizedBox(height: 24),
 
-                        // SIM Card
-                        _buildDeviceCard(
-                          type: 'SIM Module',
-                          icon: Icons.sim_card_rounded,
-                          status: deviceStatus.simUnit.status,
-                          onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                        ),
-                        const SizedBox(height: 24),
+                        // SIM Card — only show if band is connected (SIM is part of band)
+                        if (deviceStatus.watch.status == ConnectionStatus.connected) ...[
+                          _buildDeviceCard(
+                            type: 'SIM Module',
+                            deviceName: 'SafeNest SIM',
+                            icon: Icons.sim_card_rounded,
+                            status: ref.watch(healthDataProvider).simSignal > 0
+                                ? ConnectionStatus.connected
+                                : ConnectionStatus.disconnected,
+                            onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                            batteryPct: ref.watch(healthDataProvider).simBattery,
+                            signalPct: deviceStatus.simUnit.signalLevel,
+                          ),
+                          const SizedBox(height: 24),
+                        ] else ...[
+                          _buildSimOfflineCard(),
+                          const SizedBox(height: 24),
+                        ],
 
                         // Nearby devices scan section
                         _buildScanSection(),
@@ -481,9 +494,12 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
 
   Widget _buildDeviceCard({
     required String type,
+    required String deviceName,
     required IconData icon,
     required ConnectionStatus status,
     required VoidCallback onReconnect,
+    required int batteryPct,
+    int signalPct = 0,
   }) {
     final isConnected = status == ConnectionStatus.connected;
     final isConnecting = status == ConnectionStatus.connecting || status == ConnectionStatus.scanning;
@@ -550,7 +566,7 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isConnected ? 'Active Pair' : 'Not Paired',
+                        isConnected ? deviceName : 'Not Paired',
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -585,7 +601,133 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
               ),
             ],
           ),
-          
+                 if (isConnected) ...[
+            const SizedBox(height: 16),
+            // Signal + Battery grid — matches HTML layout
+            Row(
+              children: [
+                // Signal tile — show for both Wearable and SIM Module
+                if (type == 'Wearable' || type == 'SIM Module') ...[
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.network_cell_rounded,
+                            color: signalPct > 75
+                                ? const Color(0xFF3DBB7C)
+                                : signalPct > 50
+                                    ? const Color(0xFFFFC09D)
+                                    : signalPct > 25
+                                        ? Colors.orange[400]
+                                        : Colors.red[400],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'SIGNAL',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                  color: const Color(0xFF181818).withOpacity(0.35),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                signalPct > 75
+                                    ? 'Excellent'
+                                    : signalPct > 50
+                                        ? 'Good'
+                                        : signalPct > 25
+                                            ? 'Fair'
+                                            : signalPct > 0
+                                                ? 'Poor'
+                                                : 'No Signal',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF181818),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                // Battery tile
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          batteryPct > 80
+                              ? Icons.battery_full_rounded
+                              : batteryPct > 50
+                                  ? Icons.battery_5_bar_rounded
+                                  : batteryPct > 20
+                                      ? Icons.battery_3_bar_rounded
+                                      : batteryPct > 0
+                                          ? Icons.battery_alert_rounded
+                                          : Icons.battery_unknown_rounded,
+                          color: batteryPct > 50
+                              ? const Color(0xFF3DBB7C)
+                              : batteryPct > 20
+                                  ? const Color(0xFFFFC09D)
+                                  : batteryPct > 0
+                                      ? Colors.red[400]
+                                      : Colors.grey[400],
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'BATTERY',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                                color: const Color(0xFF181818).withOpacity(0.35),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              batteryPct > 0 ? '$batteryPct%' : 'Reading...',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF181818),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (!isConnected) ...[
             const SizedBox(height: 24),
             Container(
@@ -638,6 +780,99 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSimOfflineCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.sim_card_rounded, color: Colors.grey[400], size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SIM MODULE',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
+                    color: const Color(0xFF181818).withOpacity(0.3),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Not Connected',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF181818),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Connect the band to see SIM status',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF181818).withOpacity(0.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6, height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'OFFLINE',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -12,6 +12,7 @@ class RouteConstants {
   static const String profile     = '/profile';
   static const String alerts      = '/alerts';
   static const String alertsList  = '/alerts-list';
+  static const String sosSent     = '/sos-sent';
   
   // Logs
   static const String heartRate      = '/heart-rate';

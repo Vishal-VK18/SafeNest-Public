@@ -6,7 +6,8 @@ import '../../models/safety_event_model.dart';
 import '../../providers/providers.dart';
 
 class EventHistoryScreen extends ConsumerStatefulWidget {
-  const EventHistoryScreen({super.key});
+  final VoidCallback? onBack;
+  const EventHistoryScreen({super.key, this.onBack});
 
   @override
   ConsumerState<EventHistoryScreen> createState() => _EventHistoryScreenState();
@@ -27,33 +28,40 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
       return true;
     }).toList();
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFFFC09D),
-              Color(0xFFFFD6CC),
-              Color(0xFFFFCACB),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        // Do nothing — back is handled by button only
+      },
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFFC09D),
+                Color(0xFFFFD6CC),
+                Color(0xFFFFCACB),
+              ],
+            ),
+          ),
+          child: Column(
+            children: [
+              _buildHeader(context),
+              _buildFilterChips(),
+              Expanded(
+                child: filteredHistory.isEmpty 
+                  ? _buildEmptyState()
+                  : _buildTimeline(filteredHistory),
+              ),
+              _buildMonitoringActiveBanner(),
+              const SizedBox(height: 100), // Spacing for Bottom Nav
             ],
           ),
-        ),
-        child: Column(
-          children: [
-            _buildHeader(context),
-            _buildFilterChips(),
-            Expanded(
-              child: filteredHistory.isEmpty 
-                ? _buildEmptyState()
-                : _buildTimeline(filteredHistory),
-            ),
-            _buildMonitoringActiveBanner(),
-            const SizedBox(height: 100), // Spacing for Bottom Nav
-          ],
         ),
       ),
     );
@@ -65,7 +73,13 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildCircleButton(Icons.chevron_left, () => Navigator.pop(context)),
+          _buildCircleButton(Icons.chevron_left, () {
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          }),
           Text(
             'Event History',
             style: GoogleFonts.inter(
