@@ -6,6 +6,7 @@ import '../models/device_status_model.dart';
 import '../core/constants/route_constants.dart';
 import 'profile_screen.dart';
 import 'journey/appointment_details_screen.dart';
+import 'vitals/vitals_screen.dart';
 
 class DashboardTab extends ConsumerWidget {
   const DashboardTab({super.key});
@@ -323,7 +324,7 @@ class DashboardTab extends ConsumerWidget {
 
   Widget _buildFallDetectionCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, RouteConstants.fallEventLog),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VitalsScreen(initialTab: 2))),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: _blushCardDecoration(),

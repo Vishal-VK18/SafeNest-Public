@@ -84,5 +84,55 @@ class AppTheme {
         ),
       ),
     ),
+    timePickerTheme: TimePickerThemeData(
+      backgroundColor: Colors.white,
+      // Hour/minute box
+      hourMinuteColor: const Color(0xFFF6E6E0),
+      hourMinuteTextColor: const Color(0xFF181818),
+      hourMinuteTextStyle: GoogleFonts.inter(
+        fontSize: 48,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFF181818),
+      ),
+      // Clock dial
+      dialBackgroundColor: const Color(0xFFF8EEE9),
+      dialHandColor: const Color(0xFFF4A38C),
+      dialTextColor: MaterialStateColor.resolveWith((states) =>
+          states.contains(MaterialState.selected)
+              ? Colors.white
+              : const Color(0xFF181818)),
+      // AM/PM
+      dayPeriodColor: MaterialStateColor.resolveWith((states) =>
+          states.contains(MaterialState.selected)
+              ? const Color(0xFFF4A38C)
+              : const Color(0xFFF8EEE9)),
+      dayPeriodTextColor: MaterialStateColor.resolveWith((states) =>
+          states.contains(MaterialState.selected)
+              ? Colors.white
+              : const Color(0xFF181818)),
+      dayPeriodBorderSide: BorderSide.none,
+      dayPeriodShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+      // Entry mode icon (keyboard toggle)
+      entryModeIconColor: const Color(0xFFF4A38C),
+      // Header "SELECT TIME" label
+      helpTextStyle: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.5,
+        color: const Color(0xFF6F6F6F),
+      ),
+      // Cancel / OK buttons
+      cancelButtonStyle: TextButton.styleFrom(
+        foregroundColor: const Color(0xFF6F6F6F),
+      ),
+      confirmButtonStyle: TextButton.styleFrom(
+        foregroundColor: const Color(0xFFF4A38C),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+      ),
+    ),
   );
 }

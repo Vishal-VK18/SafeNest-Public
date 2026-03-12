@@ -276,54 +276,43 @@ class _HydrationDashboardSlide extends StatelessWidget {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: onPop,
-                          child: Container(
-                            width: 44, height: 44,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                              image: const DecorationImage(
-                                image: NetworkImage('https://lh3.googleusercontent.com/aida-public/AB6AXuDxUahFZlLNPAFNq6UMAo6AhmVyEcbrAw9JrWGNMU0Zj1QWPwC_-dtX6XKTzfePUG6v4ut9P4ww6C2pkRR-tK0ACDfpzRaP-yTdCPqbJzJ7OR0_yGJaISJWceJKVcEGPVnFG-vt3aQRzsBvHEL-P43TS2N5veQ4V_l3XJlhtbiTSvqYfdm6t5x0-vFhMOFzkl-UoxPaj3vOQmA0R4vP3LEk2SeK4HIeGKNzVy3dofWxTJI199OsVZbH3aFtAdZYCYyQqVGrcq0JPiIP'),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Hydration',
-                              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), height: 1.1),
-                            ),
-                            Text(
-                              'TODAY',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange[400]!.withOpacity(0.8), letterSpacing: 1.2),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    // Back button
                     GestureDetector(
-                      onTap: onGoToReminders, // Bell goes to reminders
+                      onTap: onPop,
                       child: Container(
                         width: 40, height: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.8),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.5)),
                           boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
                         ),
-                        child: const Icon(Icons.notifications, color: Color(0xFF334155), size: 22),
+                        child: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF181818), size: 16),
+                      ),
+                    ),
+                    // Title
+                    Text(
+                      'Hydration Tracker',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF181818),
+                      ),
+                    ),
+                    // Bell icon
+                    GestureDetector(
+                      onTap: onGoToReminders,
+                      child: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          shape: BoxShape.circle,
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                        ),
+                        child: const Icon(Icons.notifications_none, color: Color(0xFF181818), size: 22),
                       ),
                     ),
                   ],

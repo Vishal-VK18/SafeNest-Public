@@ -73,6 +73,11 @@ class StorageService {
   static Future<void> setSleepData(String json) =>
       _settings.put(AppConstants.keySleepData, json);
 
+  static String? get sleepReminderSettings =>
+      _settings.get('sleep_reminder_settings') as String?;
+  static Future<void> setSleepReminderSettings(String json) =>
+      _settings.put('sleep_reminder_settings', json);
+
   static String? get appointments =>
       _settings.get(AppConstants.keyAppointments) as String?;
   static Future<void> setAppointments(String json) =>

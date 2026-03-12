@@ -3,14 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../utils/blush_theme.dart';
 import '../../providers/providers.dart';
 import '../../services/auth_service.dart';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
-const _primary     = Color(0xFFBCAFD0);
 const _primaryDark = Color(0xFF8E7DA0);
-const _bgLight     = Color(0xFFF7F6F7);
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
@@ -34,7 +31,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool _obscurePass    = true;
   bool _obscureConfirm = true;
   bool _isLoading      = false;
-  bool _showAdditional = false;
 
   DateTime? _pregnancyStartDate;
   String _selectedBloodGroup = 'B+';
@@ -44,13 +40,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     if (_pregnancyStartDate == null) return 0;
     final days = DateTime.now().difference(_pregnancyStartDate!).inDays;
     return (days / 7).floor().clamp(1, 42);
-  }
-
-  String get _trimesterLabel {
-    if (_currentWeek == 0) return '–';
-    if (_currentWeek <= 13) return 'First Trimester';
-    if (_currentWeek <= 26) return 'Second Trimester';
-    return 'Third Trimester';
   }
 
   DateTime? get _estimatedDueDate {
@@ -177,483 +166,394 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // ── Blush gradient background
+          // ── Blush gradient background mapping the original style ──
           Positioned.fill(
-            child: Container(decoration: const BoxDecoration(gradient: BlushGradients.background)),
-          ),
-          SafeArea(
-            child: Column(
-          children: [
-            // ── Top navigation bar ─────────────────────────────────────────
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Container(
               decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(color: Color(0x1FBCAFD0)),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFFC09D),
+                    Color(0xFFFFCACB),
+                  ],
                 ),
               ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.arrow_back_ios,
-                        color: _primary, size: 22),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Create Account',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF111827),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 32), // balance back button
-                ],
-              ),
             ),
-
-            // ── Scrollable body ────────────────────────────────────────────
-            Expanded(
+          ),
+          // ── Soft Overlay diffusion effect ──
+          Positioned.fill(
+            child: Container(
+              color: const Color.fromRGBO(255, 253, 251, 0.35),
+            ),
+          ),
+          
+          SafeArea(
+            child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-                child: Form(
-                  key: _formKey,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Welcome text
-                      Text(
-                        'Join SafeNest',
-                        style: GoogleFonts.manrope(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: _primaryDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Start your maternal health journey with us today.',
-                        style: GoogleFonts.manrope(
-                            fontSize: 13, color: Colors.grey[500]),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // ── Account Details Card ──────────────────────────────
-                      _card(
-                        icon: Icons.person_outline,
-                        title: 'Account Details',
+                      // ── Header ──
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
                         child: Column(
                           children: [
-                            _labeledField('FULL NAME',
-                                _buildTextField(
-                                  _nameCtrl,
-                                  hint: 'Enter your full name',
-                                  validator: (v) => _req(v, 'Full Name'),
-                                )),
-                            const SizedBox(height: 16),
-                            _labeledField('EMAIL ADDRESS',
-                                _buildTextField(
-                                  _emailCtrl,
-                                  hint: 'email@safenest.com',
-                                  keyboardType: TextInputType.emailAddress,
-                                  validator: _validateEmail,
-                                )),
-                            const SizedBox(height: 16),
-                            _labeledField('PHONE NUMBER',
-                                _buildTextField(
-                                  _phoneCtrl,
-                                  hint: '+1 (555) 000-0000',
-                                  keyboardType: TextInputType.phone,
-                                  validator: _validatePhone,
-                                )),
-                            const SizedBox(height: 16),
-                            // Password row (2 columns)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _labeledField(
-                                    'PASSWORD',
-                                    _buildTextField(
-                                      _passwordCtrl,
-                                      hint: '••••••••',
-                                      obscure: _obscurePass,
-                                      validator: _validatePassword,
-                                      suffix: _visibilityToggle(
-                                          _obscurePass,
-                                          () => setState(
-                                              () => _obscurePass = !_obscurePass)),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _labeledField(
-                                    'CONFIRM',
-                                    _buildTextField(
-                                      _confirmCtrl,
-                                      hint: '••••••••',
-                                      obscure: _obscureConfirm,
-                                      validator: _validateConfirm,
-                                      suffix: _visibilityToggle(
-                                          _obscureConfirm,
-                                          () => setState(() =>
-                                              _obscureConfirm =
-                                                  !_obscureConfirm)),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: IconButton(
+                                icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF181818), size: 20),
+                                onPressed: () => Navigator.pop(context),
+                                padding: EdgeInsets.zero,
+                                alignment: Alignment.centerLeft,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Create Account',
+                              style: GoogleFonts.inter(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF181818),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Join SafeNest — start your maternal health journey',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: const Color(0xFF181818).withValues(alpha: 0.6),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
 
-                      // ── Pregnancy Information Card ──────────────────────
-                      _card(
-                        icon: Icons.child_care_outlined,
-                        title: 'Pregnancy Information',
-                        child: Column(
-                          children: [
-                            _labeledField(
-                              'PREGNANCY START DATE',
+                      // ── Main Form Card ──
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(255, 255, 255, 0.75),
+                          borderRadius: BorderRadius.circular(22),
+                          // Optional blur effect fallback manually
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // ── Account Details Section ──
+                              Text(
+                                'ACCOUNT DETAILS',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.5,
+                                  color: const Color(0xFF181818).withValues(alpha: 0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInputField(
+                                ctrl: _nameCtrl,
+                                hint: 'Full Name',
+                                icon: Icons.person_outline_rounded,
+                                validator: (v) => _req(v, 'Full Name'),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInputField(
+                                ctrl: _emailCtrl,
+                                hint: 'Email',
+                                icon: Icons.mail_outline_rounded,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: _validateEmail,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInputField(
+                                ctrl: _phoneCtrl,
+                                hint: 'Phone Number',
+                                icon: Icons.phone_outlined,
+                                keyboardType: TextInputType.phone,
+                                validator: _validatePhone,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInputField(
+                                ctrl: _passwordCtrl,
+                                hint: 'Password',
+                                icon: Icons.lock_outline_rounded,
+                                obscureText: _obscurePass,
+                                validator: _validatePassword,
+                                suffix: _visibilityToggle(
+                                  _obscurePass,
+                                  () => setState(() => _obscurePass = !_obscurePass),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInputField(
+                                ctrl: _confirmCtrl,
+                                hint: 'Confirm Password',
+                                icon: Icons.lock_outline_rounded,
+                                obscureText: _obscureConfirm,
+                                validator: _validateConfirm,
+                                suffix: _visibilityToggle(
+                                  _obscureConfirm,
+                                  () => setState(() => _obscureConfirm = !_obscureConfirm),
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 32),
+                              
+                              // ── Pregnancy Information Section ──
+                              Text(
+                                'PREGNANCY INFORMATION',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.5,
+                                  color: const Color(0xFF181818).withValues(alpha: 0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                               GestureDetector(
                                 onTap: _pickPregnancyDate,
                                 child: Container(
-                                  height: 48,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
+                                  height: 52,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    border: Border.all(
-                                        color: _primary.withValues(alpha: 0.4)),
-                                    borderRadius: BorderRadius.circular(10),
+                                    color: const Color(0xFFFAF3EF),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.calendar_today_outlined,
-                                          color: _primary, size: 18),
-                                      const SizedBox(width: 10),
+                                      const Icon(Icons.calendar_today_outlined, color: Color(0xFFE8907E), size: 18),
+                                      const SizedBox(width: 14),
                                       Text(
                                         _pregnancyStartDate == null
-                                            ? 'Select date'
+                                            ? 'Pregnancy Start Date'
                                             : '${_pregnancyStartDate!.month}/${_pregnancyStartDate!.day}/${_pregnancyStartDate!.year}',
-                                        style: GoogleFonts.manrope(
-                                          fontSize: 13,
-                                          color: _pregnancyStartDate == null
-                                              ? Colors.grey[400]
-                                              : const Color(0xFF111827),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: _pregnancyStartDate == null ? Colors.grey[400] : const Color(0xFF181818),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                // Current week (auto-calc)
-                                Expanded(
-                                  child: _labeledField(
-                                    'CURRENT WEEK',
-                                    Container(
-                                      height: 48,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16),
-                                      decoration: BoxDecoration(
-                                        color: _primary.withValues(alpha: 0.08),
-                                        border: Border.all(
-                                            color:
-                                                _primary.withValues(alpha: 0.25)),
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          _currentWeek == 0
-                                              ? '—'
-                                              : 'Week $_currentWeek',
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: _primaryDark,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                // Trimester (auto-calc)
-                                Expanded(
-                                  child: _labeledField(
-                                    'TRIMESTER',
-                                    Container(
-                                      height: 48,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10),
-                                      decoration: BoxDecoration(
-                                        color: _primary.withValues(alpha: 0.1),
-                                        border: Border.all(
-                                            color:
-                                                _primary.withValues(alpha: 0.25)),
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          _trimesterLabel,
-                                          textAlign: TextAlign.center,
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: _primaryDark,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // Show estimated due date if date selected
-                            if (_estimatedDueDate != null) ...[
                               const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _primary.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.event_available,
-                                        color: _primaryDark, size: 18),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Estimated Due Date: ${_estimatedDueDate!.month}/${_estimatedDueDate!.day}/${_estimatedDueDate!.year}',
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: _primaryDark,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Additional Health Info (collapsible) ───────────
-                      GestureDetector(
-                        onTap: () => setState(
-                            () => _showAdditional = !_showAdditional),
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                                color: _primary.withValues(alpha: 0.25)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _primary.withValues(alpha: 0.08),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.medical_information_outlined,
-                                      color: _primary, size: 22),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Additional Health Info',
-                                    style: GoogleFonts.manrope(
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF1F2937),
+                                  // Current Week input display (read-only mapping)
+                                  Expanded(
+                                    child: Container(
+                                      height: 52,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFAF3EF),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          _currentWeek == 0 ? 'Current Week' : 'Week $_currentWeek',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: _currentWeek == 0 ? Colors.grey[400] : const Color(0xFF181818),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const Spacer(),
-                                  AnimatedRotation(
-                                    turns: _showAdditional ? 0.5 : 0,
-                                    duration:
-                                        const Duration(milliseconds: 200),
-                                    child: const Icon(Icons.expand_more,
-                                        color: _primary),
+                                  const SizedBox(width: 12),
+                                  // Trimester Dropdown replacement mapper 
+                                  Expanded(
+                                    child: Container(
+                                      height: 52,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFAF3EF),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: _currentWeek == 0 ? null : (_currentWeek <= 13 ? "1st Trimester" : (_currentWeek <= 26 ? "2nd Trimester" : "3rd Trimester")),
+                                          hint: Text('Trimester', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[400])),
+                                          isExpanded: true,
+                                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE8907E)),
+                                          items: const [
+                                            DropdownMenuItem(value: '1st Trimester', child: Text('1st Trimester')),
+                                            DropdownMenuItem(value: '2nd Trimester', child: Text('2nd Trimester')),
+                                            DropdownMenuItem(value: '3rd Trimester', child: Text('3rd Trimester')),
+                                          ],
+                                          onChanged: (v) {}, // Disabled change, mapped to date picker like original code
+                                          style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF181818)),
+                                          dropdownColor: Colors.white,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                              if (_showAdditional) ...[
-                                const SizedBox(height: 16),
-                                Row(
+                              const SizedBox(height: 12),
+                              // Estimated Due date (read-only map)
+                              Container(
+                                height: 52,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFAF3EF),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
                                   children: [
-                                    Expanded(
-                                      child: _labeledField(
-                                        'AGE',
-                                        _buildTextField(
-                                          _ageCtrl,
-                                          hint: '28',
-                                          keyboardType: TextInputType.number,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _labeledField(
-                                        'BLOOD GROUP',
-                                        _buildDropdown(
-                                          value: _selectedBloodGroup,
-                                          items: const [
-                                            'A+', 'A-', 'B+', 'B-',
-                                            'O+', 'O-', 'AB+', 'AB-'
-                                          ],
-                                          onChanged: (v) => setState(
-                                              () => _selectedBloodGroup =
-                                                  v ?? _selectedBloodGroup),
-                                        ),
+                                    const Icon(Icons.check_circle_outline, color: Color(0xFFE8907E), size: 18),
+                                    const SizedBox(width: 14),
+                                    Text(
+                                      _estimatedDueDate == null
+                                          ? 'Estimated Due Date'
+                                          : '${_estimatedDueDate!.month}/${_estimatedDueDate!.day}/${_estimatedDueDate!.year}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: _estimatedDueDate == null ? Colors.grey[400] : const Color(0xFF181818),
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 16),
-                                _labeledField(
-                                  'EMERGENCY CONTACT',
-                                  Column(
-                                    children: [
-                                      _buildTextField(
-                                        _emergencyCtrl,
-                                        hint: 'Name & Relationship',
-                                      ),
-                                      const SizedBox(height: 8),
-                                      _buildTextField(
-                                        _emergencyPhoneCtrl,
-                                        hint: 'Emergency Phone',
-                                        keyboardType: TextInputType.phone,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // ── Create Account button ──────────────────────────
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _onCreate,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 4,
-                            shadowColor: _primary.withValues(alpha: 0.4),
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
-                              : Text(
-                                  'Create Account',
-                                  style: GoogleFonts.manrope(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                        ),
-                      ),
-
-                      // ── OR divider ─────────────────────────────────────
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                              child: Divider(
-                                  color: Colors.grey.shade300, thickness: 1)),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'or',
-                              style: GoogleFonts.manrope(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey[400],
-                                  letterSpacing: 1.5),
-                            ),
-                          ),
-                          Expanded(
-                              child: Divider(
-                                  color: Colors.grey.shade300, thickness: 1)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Continue with Google ───────────────────────────
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: OutlinedButton(
-                          onPressed: _isLoading ? null : _onGoogleSignIn,
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade200, width: 2),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                            backgroundColor: Colors.white,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CustomPaint(painter: _GoogleSvgPainter()),
                               ),
-                              const SizedBox(width: 12),
+                              
+                              const SizedBox(height: 32),
+                              
+                              // ── Health Information Section ──
                               Text(
-                                'Continue with Google',
-                                style: GoogleFonts.manrope(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: const Color(0xFF374151),
+                                'HEALTH INFORMATION',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.5,
+                                  color: const Color(0xFF181818).withValues(alpha: 0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                height: 52,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFAF3EF),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    hint: Text('Select Primary Health Concern', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[400])),
+                                    isExpanded: true,
+                                    icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE8907E)),
+                                    items: [
+                                      'Nutrition & Diet',
+                                      'Mental Wellness',
+                                      'Physical Activity',
+                                      'Sleep Patterns',
+                                      'Other'
+                                    ].map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      // Health concern mapping not actively saved in auth but provides UI parity
+                                    },
+                                    style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF181818)),
+                                    dropdownColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 36),
+                              
+                              // ── Form Actions ──
+                              Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(colors: [Color(0xFFF2A38A), Color(0xFFE8907E)]),
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color.fromRGBO(232, 144, 126, 0.25),
+                                      blurRadius: 12,
+                                      offset: Offset(0, 4),
+                                    )
+                                  ]
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _onCreate,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          width: 22, height: 22,
+                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                        )
+                                      : Text(
+                                          'Create Account',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              // Continue with Google secondary styling mapped over 
+                              ElevatedButton(
+                                onPressed: _isLoading ? null : _onGoogleSignIn,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF8EEE9),
+                                  foregroundColor: const Color(0xFF181818),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  minimumSize: const Size(double.infinity, 56),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CustomPaint(painter: _GoogleSvgPainter()),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Continue with Google',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
-
-                      // ── Already have account ───────────────────────────
+                      
+                      const SizedBox(height: 24),
+                      // ── Footer ──
                       Center(
                         child: RichText(
                           text: TextSpan(
-                            style: GoogleFonts.manrope(
-                                fontSize: 13, color: Colors.grey[500]),
+                            style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF181818).withValues(alpha: 0.7)),
                             children: [
                               const TextSpan(text: 'Already have an account? '),
                               WidgetSpan(
@@ -661,11 +561,10 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                                   onTap: () => Navigator.pop(context),
                                   child: Text(
                                     'Login',
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
-                                      color: _primary,
-                                      decoration: TextDecoration.none,
+                                      color: const Color(0xFF181818),
                                     ),
                                   ),
                                 ),
@@ -674,182 +573,49 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                           ),
                         ),
                       ),
-
-                      // ── Home indicator ─────────────────────────────────
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Container(
-                          width: 128,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
               ),
             ),
-          ],
-        ), // Close Column
-      ), // Close SafeArea
-        ], // Close Stack children
-      ), // Close Stack
-    ); // Close Scaffold
+          ),
+        ],
+      ),
+    );
   }
 
   // ─── Component helpers ────────────────────────────────────────────────────
-  Widget _card({
+  Widget _buildInputField({
+    required TextEditingController ctrl,
+    required String hint,
     required IconData icon,
-    required String title,
-    required Widget child,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _primary.withValues(alpha: 0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: _primary.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: _primary, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: GoogleFonts.manrope(
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1F2937),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _labeledField(String label, Widget field) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.manrope(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1,
-            color: Colors.grey[500],
-          ),
-        ),
-        const SizedBox(height: 6),
-        field,
-      ],
-    );
-  }
-
-  Widget _buildTextField(
-    TextEditingController ctrl, {
-    String hint = '',
     TextInputType keyboardType = TextInputType.text,
-    bool obscure = false,
+    bool obscureText = false,
     String? Function(String?)? validator,
     Widget? suffix,
   }) {
     return TextFormField(
       controller: ctrl,
       keyboardType: keyboardType,
-      obscureText: obscure,
+      obscureText: obscureText,
       validator: validator,
-      style: GoogleFonts.manrope(fontSize: 13),
+      style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF181818)),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle:
-            GoogleFonts.manrope(fontSize: 13, color: Colors.grey[400]),
+        hintStyle: GoogleFonts.inter(fontSize: 14, color: Colors.grey[400]),
+        prefixIcon: Icon(icon, color: const Color(0xFFE8907E), size: 18),
         suffixIcon: suffix,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: const Color(0xFFFAF3EF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primary.withValues(alpha: 0.4)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primary.withValues(alpha: 0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _primary, width: 2),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        errorStyle: GoogleFonts.manrope(fontSize: 10),
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      dropdownColor: Colors.white,
-      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-      iconSize: 22,
-      iconEnabledColor: _primaryDark,
-      iconDisabledColor: _primary,
-      items: items
-          .map((e) => DropdownMenuItem(
-                value: e,
-                child: Text(e,
-                    style: GoogleFonts.manrope(
-                      fontSize: 13,
-                      color: _primaryDark,
-                    )),
-              ))
-          .toList(),
-      onChanged: onChanged,
-      style: GoogleFonts.manrope(fontSize: 13, color: _primaryDark),
-      decoration: InputDecoration(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primary.withValues(alpha: 0.4)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primary.withValues(alpha: 0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _primaryDark, width: 2),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent),
         ),
       ),
     );

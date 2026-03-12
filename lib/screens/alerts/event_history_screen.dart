@@ -28,27 +28,22 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
       return true;
     }).toList();
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        // Do nothing — back is handled by button only
-      },
-      child: Scaffold(
-        extendBodyBehindAppBar: true,
-        backgroundColor: Colors.transparent,
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFFC09D),
-                Color(0xFFFFD6CC),
-                Color(0xFFFFCACB),
-              ],
-            ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFFC09D),
+              Color(0xFFFFCACB),
+            ],
           ),
+        ),
+        child: SafeArea(
           child: Column(
             children: [
               _buildHeader(context),
@@ -59,7 +54,7 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
                   : _buildTimeline(filteredHistory),
               ),
               _buildMonitoringActiveBanner(),
-              const SizedBox(height: 100), // Spacing for Bottom Nav
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -69,7 +64,7 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 20),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -158,12 +153,18 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.history, size: 64, color: Colors.white.withOpacity(0.5)),
+          Icon(Icons.history_outlined, size: 56, color: const Color(0xFF6F6F6F).withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
-            'No events recorded.',
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+            'No events recorded',
+            style: GoogleFonts.inter(color: const Color(0xFF6F6F6F), fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'All clear! The wearable is monitoring.',
+            style: GoogleFonts.inter(color: const Color(0xFF6F6F6F), fontSize: 13),
           ),
         ],
       ),
@@ -273,11 +274,11 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
               margin: const EdgeInsets.only(bottom: 32),
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.92),
+                color: Colors.white.withOpacity(0.75),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -298,11 +299,11 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
                         ),
                       ),
                       Text(
-                        DateFormat('hh:mm a').format(event.timestamp),
+                        DateFormat('dd MMM yyyy • HH:mm').format(event.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF9A9A9A),
+                          color: const Color(0xFF6F6F6F),
                         ),
                       ),
                     ],
@@ -311,8 +312,8 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
                   Text(
                     event.description,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: const Color(0xFF6B6B6B),
+                      fontSize: 13,
+                      color: const Color(0xFF6F6F6F),
                       height: 1.5,
                     ),
                   ),

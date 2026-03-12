@@ -29,12 +29,12 @@ import 'screens/alerts/alerts_screen.dart';
 import 'screens/logs/heart_rate_log_screen.dart';
 import 'screens/logs/temperature_log_page.dart';
 import 'screens/logs/fall_event_log_screen.dart';
-import 'screens/logs/heart_rate_page.dart';
-import 'screens/logs/temperature_page.dart';
+
 import 'screens/sim_module_status_screen.dart';
 import 'screens/journey/hydration_tracker/hydration_tracker_screen.dart';
-import 'screens/journey/sleep_oxygen_screen.dart';
+import 'screens/journey/sleep_tracker_screen.dart';
 import 'screens/journey/appointment_details_screen.dart';
+import 'screens/vitals/vitals_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -181,16 +181,19 @@ class SafeNestApp extends StatelessWidget {
         RouteConstants.hydration:          (context) => const HydrationTrackerScreen(initialPage: 0),
         RouteConstants.hydrationStats:     (context) => const HydrationTrackerScreen(initialPage: 1),
         RouteConstants.hydrationReminders: (context) => const HydrationTrackerScreen(initialPage: 2),
-        RouteConstants.sleep:              (context) => const SleepOxygenScreen(),
+        RouteConstants.sleep:              (context) => const SleepTrackerScreen(),
         RouteConstants.appointment:        (context) => const AppointmentDetailsScreen(),
         RouteConstants.sosSent:            (context) => const SosSentScreen(),
       },
       onGenerateRoute: (settings) {
+        if (settings.name == RouteConstants.vitals) {
+          return PageTransitions.slideRightToLeft(const VitalsScreen());
+        }
         if (settings.name == RouteConstants.heartRate) {
-          return PageTransitions.slideRightToLeft(const HeartRatePage());
+          return PageTransitions.slideRightToLeft(const VitalsScreen(initialTab: 0));
         }
         if (settings.name == RouteConstants.temperature) {
-          return PageTransitions.slideRightToLeft(const TemperaturePage());
+          return PageTransitions.slideRightToLeft(const VitalsScreen(initialTab: 1));
         }
         if (settings.name == RouteConstants.heartRateLog) {
           return PageTransitions.slideRightToLeft(const HeartRateLogScreen());
