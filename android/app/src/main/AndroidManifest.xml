@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
 
@@ -22,6 +24,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
     <!-- Biometric / Fingerprint unlock -->
@@ -34,7 +37,7 @@
 
     <application
         android:label="SafeNest"
-        android:name="${applicationName}"
+        android:name=".Application"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true">
@@ -72,20 +75,42 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice"/>
 
+
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="connectedDevice"
+            android:stopWithTask="false" />
+
+        <service
+            android:name=".EmergencyCallService"
+            android:exported="false" />
+
+        <receiver
+            android:name=".EmergencyReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.safenest.EMERGENCY_CALL" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Watchdog service — stays alive even when app is swiped away -->
+        <service
+            android:name=".SafeNestForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice"
+            android:stopWithTask="false" />
+
+        <!-- Boot receiver — restarts watchdog after reboot or app update -->
         <receiver
             android:name=".BootReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED"/>
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
-
-        <service
-            android:name=".BleMonitorService"
-            android:foregroundServiceType="connectedDevice"
-            android:exported="false"
-            android:stopWithTask="false"/>
 
         <meta-data
             android:name="flutterEmbedding"

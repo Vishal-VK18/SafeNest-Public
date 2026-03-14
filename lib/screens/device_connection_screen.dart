@@ -428,12 +428,30 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                               ? ConnectionStatus.connected
                               : ConnectionStatus.disconnected,
                           onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                          batteryPct: ref.watch(healthDataProvider).simBattery,
-                          signalPct: deviceStatus.simUnit.signalLevel,
+                          batteryPct: deviceStatus.watch.batteryPercent,
+                          signalPct: deviceStatus.watch.signalLevel,
                         ),
                         const SizedBox(height: 24),
-                      ] else ...[
-                        _buildSimOfflineCard(),
+
+                        // SIM Card — only show if band is connected (SIM is part of band)
+                        if (deviceStatus.watch.status == ConnectionStatus.connected) ...[
+                          _buildDeviceCard(
+                            type: 'SIM Module',
+                            deviceName: 'SafeNest SIM',
+                            icon: Icons.sim_card_rounded,
+                            status: deviceStatus.simUnit.status,
+                            onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                            batteryPct: deviceStatus.simUnit.batteryPercent,
+                            signalPct: deviceStatus.simUnit.signalLevel,
+                          ),
+                          const SizedBox(height: 24),
+                        ] else ...[
+                          _buildSimOfflineCard(),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Nearby devices scan section
+                        _buildScanSection(),
                         const SizedBox(height: 24),
                       ],
 
@@ -713,11 +731,13 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              batteryPct > 0 ? '$batteryPct%' : 'Reading...',
+                              batteryPct > 0 ? '$batteryPct%' : '—',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF181818),
+                                color: batteryPct > 0
+                                    ? const Color(0xFF181818)
+                                    : const Color(0xFF181818).withOpacity(0.3),
                               ),
                             ),
                           ],

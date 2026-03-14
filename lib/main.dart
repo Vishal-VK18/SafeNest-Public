@@ -9,6 +9,7 @@ import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'services/ble_service.dart';
 import 'services/background_service.dart';
+import 'models/device_status_model.dart';
 import 'services/system_service.dart';
 import 'services/firebase_service.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -99,8 +100,18 @@ Future<void> main() async {
     // Init foreground task communication port before runApp
     FlutterForegroundTask.initCommunicationPort();
 
+    // Fallback — if background MethodChannel fails, main isolate handles it
+    FlutterForegroundTask.addTaskDataCallback((data) {
+      if (data is Map && data['type'] == 'emergency_call') {
+        final reason = data['reason'] ?? 'Alert';
+        debugPrint('[Main] Emergency fallback call from bg: $reason');
+        const channel = MethodChannel('com.safenest.emergency/call');
+        channel.invokeMethod('triggerEmergency', {'reason': reason});
+      }
+    });
+
     // Init background service config before runApp
-    BackgroundService.init();
+    BackgroundService.instance.init();
 
     runApp(
       const ProviderScope(
@@ -143,10 +154,50 @@ Future<void> _initServicesAsync() async {
     debugPrint('SafeNest: BleService.start() failed: $e');
   }
 
-  // 4. Start native background service
+  // 4. Start background monitoring service
   try {
     if (Platform.isAndroid || Platform.isIOS) {
-      await BackgroundService.start();
+      await BackgroundService.instance.start();
+
+      // Start native watchdog service — survives app being swiped away
+      try {
+        const channel = MethodChannel('com.safenest.emergency/call');
+        await channel.invokeMethod('writeAlerts', {
+          'fall': false,
+          'tempAlert': false,
+          'simOffline': false,
+        });
+        // Start the watchdog service via Android
+        debugPrint('SafeNest: Native watchdog initialized');
+      } catch (e) {
+        debugPrint('SafeNest: Watchdog init failed: $e');
+      }
+
+      // Forward BLE health data to background isolate AND native watchdog
+      BleService.instance.healthStream.listen((health) {
+        // Derive SIM status directly from BLE packet — most reliable
+        // simSignal = 0 means SIM module is off/offline
+        // simSignal > 0 means SIM module is on and has network
+        final simOffline = health.simSignal == 0;
+
+        final data = {
+          'fall': health.fallDetected,
+          'tempAlert': health.tempAlert == 1,
+          'simOffline': simOffline,
+        };
+
+        // 1. Send to flutter_foreground_task isolate
+        BackgroundService.instance.sendData(data);
+
+        // 2. Write to shared_preferences — simOffline based on simSignal from BLE packet
+        // Use health.simSignal directly — no dependency on deviceStatus
+        // simSignal = 0 means SIM is offline, > 0 means SIM is online
+        _writeAlertsToSharedPrefs(
+          fall: health.fallDetected,
+          tempAlert: health.tempAlert == 1,
+          simOffline: health.simSignal == 0,
+        );
+      });
     } else {
       debugPrint('SafeNest: BackgroundService skipped on desktop platform.');
     }
@@ -177,6 +228,24 @@ Future<void> _initServicesAsync() async {
     debugPrint('SafeNest: Battery optimization failed: $e');
   }
 }
+
+Future<void> _writeAlertsToSharedPrefs({
+  required bool fall,
+  required bool tempAlert,
+  required bool simOffline,
+}) async {
+  try {
+    const channel = MethodChannel('com.safenest.emergency/call');
+    await channel.invokeMethod('writeAlerts', {
+      'fall': fall,
+      'tempAlert': tempAlert,
+      'simOffline': simOffline,
+    });
+  } catch (e) {
+    debugPrint('[Main] writeAlerts failed: $e');
+  }
+}
+
 
 class SafeNestApp extends StatelessWidget {
   const SafeNestApp({super.key});

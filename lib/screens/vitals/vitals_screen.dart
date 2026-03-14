@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/providers.dart';
 import '../../core/constants/route_constants.dart';
-import '../../widgets/safe_nest_bottom_navigation.dart';
-
+import '../../models/safety_event_model.dart';
 
 // ─── Blush palette ────────────────────────────────────────────────────────────
 const _coral     = Color(0xFFE9A48E);
@@ -293,30 +292,108 @@ class _TemperatureTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final health = ref.watch(healthDataProvider);
+    final tempLog = ref.watch(temperatureLogProvider);
     final hasData = health.receivedAt.year > 2000;
-    final temp = hasData ? health.temperature : 36.8;
+    final temp = hasData ? health.temperature : 0.0;
     final isNormal = health.isTemperatureNormal;
+
+    // Build chart data from real log — last 8 entries reversed (oldest→newest)
+    final chartData = tempLog.isEmpty
+        ? <double>[]
+        : tempLog.reversed.take(8).toList().map((e) => e.value).toList();
+
+    // Recent readings — last 3 entries
+    final recentReadings = tempLog.take(3).toList();
+
+    // Average from log
+    final avgTemp = tempLog.isEmpty
+        ? temp
+        : tempLog.map((e) => e.value).reduce((a, b) => a + b) / tempLog.length;
 
     return Column(
       children: [
         // ── Hero metric card ──
         _MetricHeroCard(
           label: 'AVERAGE BODY TEMPERATURE',
-          subLabel: 'Based on 8 measurements',
-          value: temp.toStringAsFixed(1),
+          subLabel: 'Based on ${tempLog.length} measurements',
+          value: temp > 0 ? temp.toStringAsFixed(1) : '—',
           unit: '°C',
-          statusColor: isNormal ? _green : _redAccent,
-          statusText: isNormal ? 'Normal' : 'Elevated',
+          statusColor: temp == 0 ? Colors.grey : (isNormal ? _green : _redAccent),
+          statusText: temp == 0 ? 'No Data' : (isNormal ? 'Normal' : 'Elevated'),
           decoration: const Icon(Icons.device_thermostat_outlined, color: Color(0xFFE9A48E), size: 80),
         ),
         const SizedBox(height: 16),
 
-        // ── Chart card ──
-        _ChartCard(
-          title: 'Temperature Over Time',
-          yLabels: const ['38.0', '37.5', '37.0', '36.5', '36.0', '35.5'],
-          xLabels: const ['00:00', '06:00', '12:00', '18:00', '21:00'],
-          painter: _TemperatureChartPainter(),
+        // ── Chart card — real data ──
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.65),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 24, offset: const Offset(0, 8))],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('TODAY\'S DATA', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.5, color: Colors.grey[400])),
+              const SizedBox(height: 4),
+              Text('Temperature Over Time', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: _dark)),
+              const SizedBox(height: 20),
+              if (chartData.isEmpty)
+                SizedBox(
+                  height: 180,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.show_chart, color: Colors.grey[300], size: 48),
+                        const SizedBox(height: 12),
+                        Text('No chart data yet', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[400])),
+                        Text('Connect the band to see live data', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 180,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: ['34.0', '33.5', '33.0', '32.5', '32.0', '31.5', '31.0', '30.5', '30.0']
+                            .map((l) => Text(l, style: GoogleFonts.inter(fontSize: 9, color: Colors.grey[400])))
+                            .toList(),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ClipRect(
+                          child: CustomPaint(
+                            painter: _TemperatureChartPainter(data: chartData),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 12),
+              if (chartData.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: tempLog.reversed.take(chartData.length).toList().map((e) {
+                      return Text(
+                        '${e.timestamp.hour.toString().padLeft(2, '0')}:${e.timestamp.minute.toString().padLeft(2, '0')}',
+                        style: GoogleFonts.inter(fontSize: 9, color: Colors.grey[400]),
+                      );
+                    }).toList(),
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -333,7 +410,7 @@ class _TemperatureTab extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Fever threshold: 37.5°C — contact your doctor if exceeded.',
+                  'High temp threshold: 33.0°C — contact your doctor if exceeded.',
                   style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: _redAccent),
                 ),
               ),
@@ -342,14 +419,37 @@ class _TemperatureTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // ── Recent readings ──
+        // ── Recent readings — real data ──
         _SectionHeader(title: 'RECENT READINGS'),
         const SizedBox(height: 10),
-        _ReadingItem(time: '09:00 AM', value: '${temp.toStringAsFixed(1)}°C', status: 'Normal', ok: true),
-        const SizedBox(height: 8),
-        _ReadingItem(time: '06:00 AM', value: '36.6°C', status: 'Normal', ok: true),
-        const SizedBox(height: 8),
-        _ReadingItem(time: '03:00 AM', value: '36.5°C', status: 'Normal', ok: true),
+        if (recentReadings.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(
+                'No readings yet — connect the band',
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[400]),
+              ),
+            ),
+          )
+        else
+          ...recentReadings.map((entry) {
+            final isElevated = entry.value >= 37.5;
+            final timeStr = '${entry.timestamp.hour.toString().padLeft(2, '0')}:${entry.timestamp.minute.toString().padLeft(2, '0')}';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _ReadingItem(
+                time: timeStr,
+                value: '${entry.value.toStringAsFixed(1)}°C',
+                status: isElevated ? 'Elevated' : 'Normal',
+                ok: !isElevated,
+              ),
+            );
+          }),
         const SizedBox(height: 20),
 
         // ── Full log button ──
@@ -373,6 +473,19 @@ class _FallDetectionTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(healthDataProvider);
     final hasFall = health.fallDetected;
+    final safetyEvents = ref.watch(safetyHistoryProvider);
+
+    // Real fall events from history
+    final fallEvents = safetyEvents
+        .where((e) => e.type == SafetyEventType.fall)
+        .toList();
+
+    // Today's falls
+    final today = DateTime.now();
+    final todayFalls = fallEvents.where((e) =>
+        e.timestamp.year == today.year &&
+        e.timestamp.month == today.month &&
+        e.timestamp.day == today.day).toList();
 
     return Column(
       children: [
@@ -459,11 +572,19 @@ class _FallDetectionTab extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(child: _StatMini(value: hasFall ? '1' : '0', label: 'Falls Today', valueColor: hasFall ? _redAccent : _dark)),
+                  Expanded(child: _StatMini(
+                    value: todayFalls.length.toString(),
+                    label: 'Falls Today',
+                    valueColor: todayFalls.isNotEmpty ? _redAccent : _dark,
+                  )),
                   const SizedBox(width: 12),
-                  Expanded(child: _StatMini(value: '12h', label: 'Monitored')),
+                  Expanded(child: _StatMini(value: '${fallEvents.length}', label: 'Total Events')),
                   const SizedBox(width: 12),
-                  Expanded(child: _StatMini(value: hasFall ? '90%' : '100%', label: 'Safe Time', valueColor: _green)),
+                  Expanded(child: _StatMini(
+                    value: todayFalls.isEmpty ? '100%' : '${(100 - (todayFalls.length * 10)).clamp(0, 100)}%',
+                    label: 'Safe Time',
+                    valueColor: _green,
+                  )),
                 ],
               ),
             ],
@@ -485,7 +606,16 @@ class _FallDetectionTab extends ConsumerWidget {
             children: [
               Text('FALL EVENT LOG', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.5, color: Colors.grey[400])),
               const SizedBox(height: 16),
-              if (!hasFall)
+              if (hasFall)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _FallEventItem(
+                    date: 'Today · Just now',
+                    type: 'Fall Detected',
+                    isAlert: true,
+                  ),
+                ),
+              if (fallEvents.isEmpty && !hasFall)
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -496,24 +626,39 @@ class _FallDetectionTab extends ConsumerWidget {
                         Container(
                           width: 56,
                           height: 56,
-                          decoration: BoxDecoration(color: _green.withValues(alpha: 0.12), shape: BoxShape.circle),
+                          decoration: BoxDecoration(
+                            color: _green.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
                           child: const Icon(Icons.check_circle_outline, color: _green, size: 28),
                         ),
                         const SizedBox(height: 12),
-                        Text('No falls detected today', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF6F6F6F))),
+                        Text('No falls detected',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF6F6F6F))),
                         const SizedBox(height: 6),
-                        Text('The wearable is actively monitoring.', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6F6F6F))),
-                        Text('You\'re doing great!', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6F6F6F))),
+                        Text('The wearable is actively monitoring.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6F6F6F))),
                       ],
                     ),
                   ),
                 )
               else
-                _FallEventItem(date: 'Today · Just now', type: 'Fall Detected', isAlert: true),
-              const SizedBox(height: 8),
-              _FallEventItem(date: '17 DEC · 14:32 PM', type: 'Fall Detected', isAlert: true),
-              const SizedBox(height: 8),
-              _FallEventItem(date: '16 DEC · 09:15 AM', type: 'False Alarm', isAlert: false),
+                ...fallEvents.take(5).map((event) {
+                  final months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+                  final t = event.timestamp;
+                  final dateStr =
+                      '${t.day} ${months[t.month - 1]} · ${t.hour.toString().padLeft(2,'0')}:${t.minute.toString().padLeft(2,'0')}';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _FallEventItem(
+                      date: dateStr,
+                      type: 'Fall Detected',
+                      isAlert: true,
+                    ),
+                  );
+                }),
             ],
           ),
         ),
@@ -975,63 +1120,74 @@ class _HeartRateChartPainter extends CustomPainter {
 }
 
 class _TemperatureChartPainter extends CustomPainter {
-  final List<double> data = const [36.4, 36.6, 36.5, 36.7, 36.8, 36.6, 36.7, 36.5];
-  final double minVal = 35.5;
-  final double maxVal = 38.0;
+  final List<double> data;
+  final double minVal = 30.0;
+  final double maxVal = 34.0;
+
+  _TemperatureChartPainter({required this.data});
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (data.length < 2) return;
+
+    // Clamp all values inside min/max so line never goes outside box
+    final safeData = data.map((v) => v.clamp(minVal, maxVal)).toList();
+
+    // Add padding so line never touches top/bottom edge
+    const vPad = 10.0;
+    final drawH = size.height - vPad * 2;
+
+    final getX = (int i) => (size.width / (safeData.length - 1)) * i;
+    final getY = (double v) => vPad + ((maxVal - v) / (maxVal - minVal)) * drawH;
+
     // Grid lines
     final gridPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.05)
       ..strokeWidth = 1;
     for (int i = 0; i < 6; i++) {
-      final y = (size.height / 5) * i;
+      final y = vPad + (drawH / 5) * i;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    // Fever threshold at 37.5
+    // Fever threshold at 33.0
     final threshPaint = Paint()
       ..color = _redAccent
       ..strokeWidth = 1.5;
-    final threshY = ((maxVal - 37.5) / (maxVal - minVal)) * size.height;
+    final threshY = getY(33.0);
     _drawDashedLine(canvas, Offset(0, threshY), Offset(size.width, threshY), threshPaint);
 
-    final getX = (int i) => (size.width / (data.length - 1)) * i;
-    final getY = (double v) => ((maxVal - v) / (maxVal - minVal)) * size.height;
-
-    // Main line
+    // Main line — black, inside box
     final linePaint = Paint()
       ..color = _dark
       ..strokeWidth = 3
-      ..strokeJoin = StrokeJoin.miter
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
     final path = Path();
-    for (int i = 0; i < data.length; i++) {
-      i == 0 ? path.moveTo(getX(i), getY(data[i])) : path.lineTo(getX(i), getY(data[i]));
+    for (int i = 0; i < safeData.length; i++) {
+      final x = getX(i);
+      final y = getY(safeData[i]);
+      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
     }
     canvas.drawPath(path, linePaint);
 
     // Markers
-    for (int i = 0; i < data.length; i++) {
-      final highlight = i == 4;
-      final paint = Paint()
-        ..color = highlight ? Colors.white : _dark
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(getX(i), getY(data[i])), highlight ? 5 : 3.5, paint);
-      if (!highlight) {
-        final stroke = Paint()
-          ..color = _dark
+    for (int i = 0; i < safeData.length; i++) {
+      final x = getX(i);
+      final y = getY(safeData[i]);
+      final isLast = i == safeData.length - 1;
+      // Fill
+      canvas.drawCircle(Offset(x, y), isLast ? 5 : 3.5,
+          Paint()..color = isLast ? Colors.white : _dark);
+      // Stroke
+      canvas.drawCircle(
+        Offset(x, y),
+        isLast ? 5 : 3.5,
+        Paint()
+          ..color = isLast ? _redAccent : _dark
           ..strokeWidth = 2
-          ..style = PaintingStyle.stroke;
-        canvas.drawCircle(Offset(getX(i), getY(data[i])), 3.5, stroke);
-      } else {
-        final stroke = Paint()
-          ..color = _redAccent
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke;
-        canvas.drawCircle(Offset(getX(i), getY(data[i])), 5, stroke);
-      }
+          ..style = PaintingStyle.stroke,
+      );
     }
   }
 

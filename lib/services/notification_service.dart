@@ -7,6 +7,7 @@ import 'storage_service.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
+  static void Function(String title, String body)? onNotif;
 
   // ─── Init ────────────────────────────────────────────────────────────────────
   static Future<void> init() async {
@@ -68,6 +69,7 @@ class NotificationService {
 
     try {
       await _plugin.show(id, title, body, details);
+      onNotif?.call(title, body);
     } catch (e) {
       debugPrint('[Notification] Error: $e');
     }

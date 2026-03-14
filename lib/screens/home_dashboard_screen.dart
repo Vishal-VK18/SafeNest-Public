@@ -11,8 +11,9 @@ import 'emergency_alert_screen.dart';
 import 'profile_screen.dart';
 import 'alerts/event_history_screen.dart';
 import '../models/safety_event_model.dart';
-import '../widgets/safe_nest_bottom_navigation.dart';
-
+import '../models/device_status_model.dart';
+import '../services/emergency_call_service.dart';
+import '../services/notification_service.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -23,6 +24,41 @@ class HomeDashboardScreen extends ConsumerStatefulWidget {
 
 class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   bool _sosVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // NotificationService.onNotif is already wired in some versions, 
+    // but the user requested setting it here.
+    NotificationService.onNotif = (title, body) {
+      ref.read(safetyHistoryProvider.notifier).addEvent(
+            type: SafetyEventType.system,
+            description: '$title: $body',
+          );
+    };
+
+    // Listen for fall/temp alerts — if SIM offline, place call from phone
+    ref.listenManual(healthDataProvider, (prev, next) {
+      final simOffline = ref.read(deviceStatusProvider).simUnit.status
+          != ConnectionStatus.connected;
+
+      // Fall — leading edge only
+      if (next.fallDetected && (prev == null || !prev.fallDetected)) {
+        EmergencyCallService.instance.callIfNeeded(
+          simOffline: simOffline,
+          reason: 'FALL DETECTED',
+        );
+      }
+
+      // High temp — leading edge only (tempAlert: 1 = high)
+      if (next.tempAlert == 1 && (prev == null || prev.tempAlert != 1)) {
+        EmergencyCallService.instance.callIfNeeded(
+          simOffline: simOffline,
+          reason: 'HIGH TEMP: ${next.temperature.toStringAsFixed(1)}°C',
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

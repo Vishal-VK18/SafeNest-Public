@@ -37,6 +37,7 @@ class BleService {
 
   // ─── State ────────────────────────────────────────────────────────────────────
   DeviceStatusModel _deviceStatus = DeviceStatusModel.initial();
+  DeviceStatusModel get currentDeviceStatus => _deviceStatus;
   HealthDataModel   _lastHealth   = HealthDataModel.empty();
   BluetoothDevice?  _watchDevice;
   BluetoothDevice?  _simDevice;
@@ -359,8 +360,9 @@ class BleService {
     _lastHealth = model;
     if (!_healthCtrl.isClosed) _healthCtrl.add(model);
 
-    // Update watch — battery + signal together
+    // Update watch + SIM in a single copyWith to prevent overwriting
     if (_deviceStatus.watch.isConnected) {
+      final simOnline = model.simSignal > 0 || model.simBattery > 0;
       _updateDeviceStatus(_deviceStatus.copyWith(
         watch: _deviceStatus.watch.copyWith(
           batteryPercent: model.bandBattery > 0
@@ -371,19 +373,16 @@ class BleService {
               : _deviceStatus.watch.signalLevel,
           lastSeen: DateTime.now(),
         ),
-      ));
-    }
-
-    // Update SIM unit — battery + signal together
-    if (_deviceStatus.watch.isConnected) {
-      _updateDeviceStatus(_deviceStatus.copyWith(
         simUnit: _deviceStatus.simUnit.copyWith(
+          status: simOnline
+              ? ConnectionStatus.connected
+              : ConnectionStatus.disconnected,
           batteryPercent: model.simBattery > 0
               ? model.simBattery
-              : _deviceStatus.simUnit.batteryPercent,
+              : (simOnline ? _deviceStatus.simUnit.batteryPercent : 0),
           signalLevel: model.simSignal > 0
               ? model.simSignal
-              : _deviceStatus.simUnit.signalLevel,
+              : (simOnline ? _deviceStatus.simUnit.signalLevel : 0),
           lastSeen: DateTime.now(),
         ),
       ));
@@ -398,7 +397,7 @@ class BleService {
     // Fall — fires every time a NEW fall is detected (leading edge only)
     if (model.fallDetected && !_lastHealth.fallDetected) {
       NotificationService.showFallAlert();
-      BackgroundService.showFallNotification();
+      BackgroundService.instance.showFallNotification();
       _recordEvent(SafetyEventType.fall,
           'Fall detected. Temp: ${model.temperature.toStringAsFixed(1)}°C.'
           '${model.heartRate > 0 ? ' HR: ${model.heartRate} BPM.' : ''}');
@@ -417,7 +416,7 @@ class BleService {
     if (isHighTemp && !_tempAlertActive) {
       _tempAlertActive = true;
       NotificationService.showHighTemperature(model.temperature);
-      BackgroundService.showTempNotification(model.temperature);
+      BackgroundService.instance.showTempNotification(model.temperature);
     } else if (!isHighTemp) {
       _tempAlertActive = false;
     }
@@ -449,17 +448,17 @@ class BleService {
     debugPrint('[BLE] Watch disconnected');
     _heartbeatTimer?.cancel();
     _watchDevice = null;
-    // Reset health data battery fields
-    _lastHealth = _lastHealth.copyWith(bandBattery: 0, simBattery: 0);
+
+    // Reset ALL health data immediately so UI clears
+    _lastHealth = HealthDataModel.empty();
     if (!_healthCtrl.isClosed) _healthCtrl.add(_lastHealth);
-    // Clear battery + signal so UI shows disconnected state, not stale values
+
+    // Clear watch AND sim unit status immediately
     _updateDeviceStatus(_deviceStatus.copyWith(
-      watch: _deviceStatus.watch.copyWith(
-        status: ConnectionStatus.disconnected,
-        batteryPercent: 0,
-        signalLevel: 0,
-      ),
+      watch: DeviceInfo.empty('SafeNest Band'),
+      simUnit: DeviceInfo.empty('SafeNest SIM'),
     ));
+
     _maybeSendDisconnectNotif('SafeNest Watch');
     _scheduleReconnect(() => _startAutoScan());
   }
@@ -467,14 +466,11 @@ class BleService {
   void _onSimDisconnected() {
     debugPrint('[BLE] SIM unit disconnected');
     _simDevice = null;
-    // Clear battery so UI shows disconnected state, not stale values
+
     _updateDeviceStatus(_deviceStatus.copyWith(
-      simUnit: _deviceStatus.simUnit.copyWith(
-        status: ConnectionStatus.disconnected,
-        batteryPercent: 0,
-        signalLevel: 0,
-      ),
+      simUnit: DeviceInfo.empty('SafeNest SIM'),
     ));
+
     _maybeSendDisconnectNotif('SafeNest SIM');
     _scheduleReconnect(() => _startAutoScan());
   }
