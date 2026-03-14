@@ -411,7 +411,7 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                           icon: Icons.watch_rounded,
                           status: deviceStatus.watch.status,
                           onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                          batteryPct: ref.watch(healthDataProvider).bandBattery,
+                          batteryPct: deviceStatus.watch.batteryPercent,
                           signalPct: deviceStatus.watch.signalLevel,
                         ),
                         const SizedBox(height: 24),
@@ -422,11 +422,9 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                             type: 'SIM Module',
                             deviceName: 'SafeNest SIM',
                             icon: Icons.sim_card_rounded,
-                            status: ref.watch(healthDataProvider).simSignal > 0
-                                ? ConnectionStatus.connected
-                                : ConnectionStatus.disconnected,
+                            status: deviceStatus.simUnit.status,
                             onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                            batteryPct: ref.watch(healthDataProvider).simBattery,
+                            batteryPct: deviceStatus.simUnit.batteryPercent,
                             signalPct: deviceStatus.simUnit.signalLevel,
                           ),
                           const SizedBox(height: 24),
@@ -712,11 +710,13 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              batteryPct > 0 ? '$batteryPct%' : 'Reading...',
+                              batteryPct > 0 ? '$batteryPct%' : '—',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF181818),
+                                color: batteryPct > 0
+                                    ? const Color(0xFF181818)
+                                    : const Color(0xFF181818).withOpacity(0.3),
                               ),
                             ),
                           ],

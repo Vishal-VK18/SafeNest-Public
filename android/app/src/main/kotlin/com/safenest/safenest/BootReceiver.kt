@@ -1,19 +1,28 @@
 package com.safenest.safenest
 
-import android.content.*
-import android.os.Build
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.util.Log
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
-            intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
-            val serviceIntent = Intent(context, BleMonitorService::class.java).apply {
-                action = BleMonitorService.ACTION_START
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val action = intent.action
+        Log.d("BootReceiver", "Received: $action")
+        if (
+            action == Intent.ACTION_BOOT_COMPLETED ||
+            action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+            action == "android.intent.action.QUICKBOOT_POWERON" ||
+            action == Intent.ACTION_LOCKED_BOOT_COMPLETED
+        ) {
+            Log.d("BootReceiver", "Restarting SafeNest foreground service")
+            val serviceIntent = Intent(context, SafeNestForegroundService::class.java)
+            serviceIntent.action = "START"
+            try {
                 context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
+                Log.d("BootReceiver", "Service restart requested")
+            } catch (e: Exception) {
+                Log.e("BootReceiver", "Failed to restart service: ${e.message}")
             }
         }
     }
