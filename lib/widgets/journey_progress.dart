@@ -36,7 +36,7 @@ class JourneyProgress extends StatelessWidget {
                   value: 1.0,
                   strokeWidth: 12,
                   backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.softLilac),
+                  valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFFF8EEE9)),
                 ),
               ),
               // Gradient-like progress (custom painter for better look)
@@ -47,7 +47,7 @@ class JourneyProgress extends StatelessWidget {
                   painter: _GradientCircularPainter(
                     progress: progress,
                     backgroundColor: Colors.transparent,
-                    color: AppColors.primaryDark,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -74,7 +74,7 @@ class JourneyProgress extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.lavenderText.withOpacity(0.6),
+                        color: const Color(0xFFE9A48E).withOpacity(0.6),
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -84,7 +84,7 @@ class JourneyProgress extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 36,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.lavenderText,
+                        color: const Color(0xFFE9A48E),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -93,7 +93,7 @@ class JourneyProgress extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.lavenderText.withOpacity(0.5),
+                        color: const Color(0xFFE9A48E).withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -106,11 +106,11 @@ class JourneyProgress extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.primaryDark,
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryDark.withOpacity(0.3),
+                color: AppColors.primary.withOpacity(0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -155,7 +155,7 @@ class _GradientCircularPainter extends CustomPainter {
 
     // Conic gradient effect (simplified to linear for now, but rotating it)
     paint.shader = SweepGradient(
-      colors: [AppColors.primary, AppColors.primaryDark],
+      colors: [AppColors.blush, AppColors.primary],
       stops: const [0.0, 1.0],
       transform: const GradientRotation(-pi / 2),
     ).createShader(Rect.fromCircle(center: center, radius: radius));

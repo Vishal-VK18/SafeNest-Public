@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'services/ble_service.dart';
@@ -13,10 +14,16 @@ import 'services/system_service.dart';
 import 'services/firebase_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'firebase_options.dart';
+import 'core/providers/logs_provider.dart';
+import 'core/models/log_parameter.dart';
+import 'screens/logs/logs_detail_screen.dart';
+
 import 'utils/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/auth/get_started_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/create_account_screen.dart';
 import 'screens/home_dashboard_screen.dart';
@@ -57,19 +64,35 @@ Future<void> main() async {
 
     try {
       await StorageService.init();
+      // Open auth prefs box early so splash can read it fast
+      await Hive.openBox('auth_prefs');
     } catch (e) {
       debugPrint('SafeNest: StorageService.init() failed: $e');
     }
 
-    // Firebase init
+    // Firebase initialization
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      debugPrint('SafeNest: Firebase initialized');
+
+      // CRITICAL: Enable offline persistence BEFORE any database read/write
+      // Must use instanceFor with explicit databaseURL for asia-southeast1 region
+      FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://safenest-5bbc2-default-rtdb.asia-southeast1.firebasedatabase.app',
+      ).setPersistenceEnabled(true);
+
+      FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://safenest-5bbc2-default-rtdb.asia-southeast1.firebasedatabase.app',
+      ).setPersistenceCacheSizeBytes(10485760); // 10MB offline cache
+      
+      debugPrint('SafeNest: Firebase & RTDB initialized');
     } catch (e) {
       debugPrint('SafeNest: Firebase init failed: $e');
     }
+
 
     // FCM background handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -237,12 +260,12 @@ class SafeNestApp extends StatelessWidget {
       routes: {
         '/': (context) => const SplashScreen(),
         RouteConstants.splash: (context) => const SplashScreen(),
-        RouteConstants.getStarted: (context) => const GetStartedScreen(),
+        RouteConstants.getStarted: (context) => const OnboardingScreen(),
         RouteConstants.login: (context) => const LoginScreen(),
         RouteConstants.createAccount: (context) => const CreateAccountScreen(),
-        RouteConstants.home:    (context) => const HomeDashboardScreen(),
-        RouteConstants.dashboard: (context) => const HomeDashboardScreen(),
-        RouteConstants.journey:  (context) => const HomeDashboardScreen(),
+        RouteConstants.home:    (context) => HomeDashboardScreen(),
+        RouteConstants.dashboard: (context) => HomeDashboardScreen(),
+        RouteConstants.journey:  (context) => HomeDashboardScreen(),
         RouteConstants.devices: (context) => const DeviceConnectionScreen(),
         RouteConstants.profile: (context) => const SettingsScreen(),
         RouteConstants.alerts:  (context) => const EmergencyAlertScreen(),
@@ -253,10 +276,19 @@ class SafeNestApp extends StatelessWidget {
         RouteConstants.sleep:              (context) => const SleepTrackerScreen(),
         RouteConstants.appointment:        (context) => const AppointmentDetailsScreen(),
         RouteConstants.sosSent:            (context) => const SosSentScreen(),
+        RouteConstants.logsDetail: (context) {
+          final parameter = ModalRoute.of(context)!.settings.arguments as LogParameter;
+          return LogsDetailScreen(parameter: parameter);
+        },
       },
       onGenerateRoute: (settings) {
         if (settings.name == RouteConstants.vitals) {
-          return PageTransitions.slideRightToLeft(const VitalsScreen());
+          int initialTab = 0;
+          if (settings.arguments is Map<String, dynamic>) {
+            final args = settings.arguments as Map<String, dynamic>;
+            initialTab = args['initialTab'] ?? 0;
+          }
+          return PageTransitions.slideRightToLeft(VitalsScreen(initialTab: initialTab));
         }
         if (settings.name == RouteConstants.heartRate) {
           return PageTransitions.slideRightToLeft(const VitalsScreen(initialTab: 0));

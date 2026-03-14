@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/route_constants.dart';
+import '../../core/navigation/page_transitions.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AlertsScreen extends StatelessWidget {
@@ -26,16 +28,38 @@ class AlertsScreen extends StatelessWidget {
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
           child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.4),
-                shape: BoxShape.circle,
+            onTap: () {
+            debugPrint('[SafeNest Nav] ← Back tapped: AlertsScreen');
+            debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+              Navigator.of(context, rootNavigator: true).pop();
+            } else {
+              Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                RouteConstants.dashboard, (route) => false,
+              );
+            }
+          },
+          behavior: HitTestBehavior.opaque, // Added as per instruction
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.40),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.50),
+                width: 1,
               ),
-              child: const Icon(Icons.chevron_left, color: Color(0xFF181818), size: 24),
             ),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Color(0xFF181818),
+              size: 18,
+            ),
+          ),
           ),
         ),
       ),

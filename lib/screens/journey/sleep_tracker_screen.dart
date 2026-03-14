@@ -13,10 +13,14 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/constants/route_constants.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../models/sleep_tracker_model.dart';
+import '../../core/models/sleep_session.dart';
+import '../../models/sleep_tracker_model.dart' as old_sleep;
 import '../../providers/providers.dart';
+import '../../widgets/safe_nest_bottom_navigation.dart';
+
 
 // ── Blush palette ──────────────────────────────────────────────────────────────
 const _peach    = Color(0xFFFFC09D);
@@ -61,18 +65,21 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sleep   = ref.watch(sleepTrackerProvider);
+    final sleepState = ref.watch(sleepTrackerProvider);
     final notifier = ref.read(sleepTrackerProvider.notifier);
-    final isTracking = sleep.status == SleepTrackingStatus.tracking;
-    final isPaused   = sleep.status == SleepTrackingStatus.paused;
-    final isIdle     = sleep.status == SleepTrackingStatus.idle;
-
-    final currentDuration = sleep.currentDuration;
-    final lastSession     = sleep.lastSession;
+    
+    final isTracking = sleepState.isTracking;
+    final lastSession = sleepState.lastSession;
+    final activeSession = sleepState.activeSession;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
+      bottomNavigationBar: const SafeNestBottomNavigation(),
+
       body: Stack(
+
         children: [
           // ── Blush gradient background ──
           Positioned.fill(
@@ -93,7 +100,8 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
 
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 90),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+
               child: Column(
                 children: [
                   // ── Header ──
@@ -102,8 +110,10 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _circleBtn(Icons.arrow_back_ios_new, 16,
-                            () => Navigator.pop(context)),
+                        _circleBtn(Icons.arrow_back, 20, () {
+                          debugPrint('[SafeNest Nav] Sleep Tracker back button tapped');
+                          Navigator.pop(context);
+                        }),
                         Text(
                           'Rest & Recovery',
                           style: GoogleFonts.inter(
@@ -120,9 +130,9 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
                   // ── Night-sky circle ──
                   _buildNightSkyCircle(
                     isTracking: isTracking,
-                    isPaused: isPaused,
-                    isIdle: isIdle,
-                    currentDuration: currentDuration,
+                    isPaused: false, // Paused removed as per user spec
+                    isIdle: !isTracking,
+                    currentDuration: sleepState.elapsed,
                     lastSession: lastSession,
                   ),
 
@@ -133,29 +143,39 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _tag(isTracking
-                          ? 'Tracking… ${_formatDuration(currentDuration)}'
-                          : isPaused
-                              ? 'Paused'
-                              : lastSession != null
-                                  ? 'Quality: ${lastSession.qualityLabel}'
-                                  : 'Ready to track'),
-                      if (!isIdle) ...[
+                          ? 'Tracking… ${ref.read(sleepTrackerProvider.notifier).formattedElapsed}'
+                          : lastSession != null
+                              ? 'Quality: ${lastSession.qualityFromDuration}'
+                              : 'Ready to track'),
+                      if (isTracking) ...[
                         const SizedBox(width: 8),
-                        _tag(isPaused ? 'Tap Resume' : 'Tap Stop to save'),
+                        _tag('Tap Stop to save'),
                       ] else if (lastSession != null) ...[
                         const SizedBox(width: 8),
                         _tag('Feeling: Refreshed'),
                       ],
                     ],
                   ),
+                  
+                  if (sleepState.isSaving) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Saving to cloud...',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFFE9A48E),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 24),
 
                   // ── Control buttons ──
                   _buildControls(
-                    isIdle: isIdle,
+                    isIdle: !isTracking,
                     isTracking: isTracking,
-                    isPaused: isPaused,
+                    isPaused: false,
                     notifier: notifier,
                   ),
 
@@ -171,11 +191,11 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
                   ],
 
                   // ── Weekly Rhythm ──
-                  _buildWeeklyRhythm(sleep.history),
+                  _buildWeeklyRhythm(sleepState.history),
                   const SizedBox(height: 24),
 
                   // ── Wind Down Reminder ──
-                  _buildReminderCard(context, sleep.reminder, notifier),
+                  _buildReminderCard(context, sleepState.reminder, notifier),
                 ],
               ),
             ),
@@ -204,7 +224,7 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
       subText  = 'Sleep tracking paused';
     } else if (lastSession != null) {
       mainText = 'Your rest was deep\nand restorative';
-      subText  = 'You slept for ${_formatDuration(lastSession.totalSleep)}';
+      subText  = 'You slept for ${lastSession.formattedDuration}';
     } else {
       mainText = 'Ready to track\nyour sleep';
       subText  = 'Tap Start Sleep to begin';
@@ -328,58 +348,28 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
       return _primaryBtn(
         label: 'START SLEEP',
         icon: Icons.nightlight_round,
-        onTap: notifier.startTracking,
+        onTap: notifier.startSleep,
       );
     }
 
-    return Row(
-      children: [
-        if (isTracking)
-          Expanded(
-            child: _outlineBtn(
-              label: 'PAUSE',
-              icon: Icons.pause,
-              onTap: notifier.pauseTracking,
-            ),
-          ),
-        if (isPaused)
-          Expanded(
-            child: _outlineBtn(
-              label: 'RESUME',
-              icon: Icons.play_arrow,
-              onTap: notifier.resumeTracking,
-            ),
-          ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _primaryBtn(
-            label: 'STOP',
-            icon: Icons.stop_rounded,
-            color: const Color(0xFF2D3047),
-            onTap: () async {
-              final session = await notifier.stopTracking();
-              if (session != null && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: const Color(0xFF2D3047),
-                    content: Text(
-                      'Saved! ${_formatDuration(session.totalSleep)} — '
-                      '${session.qualityLabel} sleep',
-                      style: GoogleFonts.inter(color: Colors.white),
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
+    return Center(
+      child: SizedBox(
+        width: 200,
+        child: _primaryBtn(
+          label: 'STOP SLEEP',
+          icon: Icons.stop_rounded,
+          color: const Color(0xFFE68C6C), // Deep peach for active state
+          onTap: () async {
+            await notifier.stopSleep();
+          },
         ),
-      ],
+      ),
     );
   }
 
   // ── Morning insights card ─────────────────────────────────────────────────────
   Widget _buildInsightsCard(SleepSession session) {
-    final deepH = session.deepSleep.inMinutes / 60.0;
+    final deepH = (session.durationMinutes ?? 0) * 0.45 / 60.0;
     return _glassCard(
       child: Column(
         children: [
@@ -443,10 +433,10 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
 
   // ── Sleep stages card ─────────────────────────────────────────────────────────
   Widget _buildStagesCard(SleepSession session) {
-    final total = session.totalSleep.inMinutes;
+    final total = session.durationMinutes ?? 0;
     if (total == 0) return const SizedBox.shrink();
-    final deepFrac  = session.deepSleep.inMinutes / total;
-    final lightFrac = session.lightSleep.inMinutes / total;
+    const deepFrac = 0.45;
+    const lightFrac = 0.55;
 
     return _glassCard(
       child: Column(
@@ -467,12 +457,12 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
                 Flexible(
                   flex: (deepFrac * 100).round(),
                   child: Container(
-                      height: 40, color: const Color(0xFFB9AAFF)),
+                      height: 40, color: const Color(0xFFE9A48E)), // Accent Peach (Deep)
                 ),
                 Flexible(
                   flex: (lightFrac * 100).round(),
                   child: Container(
-                      height: 40, color: const Color(0xFFD8CEFF)),
+                      height: 40, color: const Color(0xFFF5C7B8)), // Light Peach (Light)
                 ),
               ],
             ),
@@ -481,10 +471,10 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _legendItem('Deep  ${_formatDuration(session.deepSleep)}',
-                  const Color(0xFFB9AAFF)),
-              _legendItem('Light  ${_formatDuration(session.lightSleep)}',
-                  const Color(0xFFD8CEFF)),
+              _legendItem('Deep  ${(total * 0.45).round()}m',
+                  const Color(0xFFE9A48E)),
+              _legendItem('Light  ${(total * 0.55).round()}m',
+                  const Color(0xFFF5C7B8)),
             ],
           ),
         ],
@@ -525,7 +515,7 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
       if (offset < 0 || offset > 6) continue;
       // weekday: 1=Mon … 7=Sun; map to 0-based
       final idx = (s.startTime.weekday - 1) % 7;
-      final h = s.totalSleep.inMinutes / 60.0;
+      final h = (s.durationMinutes ?? 0) / 60.0;
       hoursMap[idx] = (hoursMap[idx] ?? 0).clamp(0, h + (hoursMap[idx] ?? 0));
     }
 
@@ -568,9 +558,8 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(99),
                             color: hasData
-                                ? _coral.withValues(
-                                    alpha: isBest ? 1.0 : 0.6)
-                                : Colors.white.withValues(alpha: 0.4),
+                                ? _coral
+                                : const Color(0xFFEFE6E1),
                             border: isToday
                                 ? Border.all(
                                     color: Colors.white, width: 2)
@@ -578,8 +567,8 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
                             boxShadow: isBest
                                 ? [
                                     BoxShadow(
-                                        color: _coral.withValues(
-                                            alpha: 0.4),
+                                        color: _coral.withOpacity(
+                                            0.4),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4)),
                                   ]
@@ -636,8 +625,10 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
     SleepReminderSettings reminder,
     SleepTrackerNotifier notifier,
   ) {
-    final timeStr =
-        '${reminder.reminderTime.hourOfPeriod}:${reminder.reminderTime.minute.toString().padLeft(2, '0')} ${reminder.reminderTime.period == DayPeriod.am ? 'AM' : 'PM'}';
+    final t = reminder.reminderTime ?? DateTime(2024, 1, 1, 22, 0);
+    final isPm = t.hour >= 12;
+    final displayHour = t.hour == 0 ? 12 : (t.hour > 12 ? t.hour - 12 : t.hour);
+    final timeStr = '$displayHour:${t.minute.toString().padLeft(2, '0')} ${isPm ? 'PM' : 'AM'}';
 
     return _glassCard(
       child: Column(
@@ -678,7 +669,9 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
             onTap: () async {
               final picked = await showTimePicker(
                 context: context,
-                initialTime: reminder.reminderTime,
+                initialTime: reminder.reminderTime != null 
+                    ? TimeOfDay.fromDateTime(reminder.reminderTime!) 
+                    : const TimeOfDay(hour: 22, minute: 0),
                 builder: (context, child) => MediaQuery(
                   data: MediaQuery.of(context)
                       .copyWith(alwaysUse24HourFormat: false),
@@ -757,14 +750,41 @@ class _SleepTrackerScreenState extends ConsumerState<SleepTrackerScreen> {
 
   Widget _circleBtn(IconData icon, double size, VoidCallback onTap) =>
       GestureDetector(
-        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (icon == Icons.arrow_back || icon == Icons.arrow_back_ios_new) {
+            debugPrint('[SafeNest Nav] ← Back tapped: SleepTrackerScreen');
+            debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+              Navigator.of(context, rootNavigator: true).pop();
+            } else {
+              Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                RouteConstants.dashboard, (route) => false,
+              );
+            }
+          } else {
+            onTap();
+          }
+        },
         child: Container(
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.6),
-              shape: BoxShape.circle),
-          child: Icon(icon, size: size, color: _dark),
+            color: Colors.white.withValues(alpha: 0.40),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.50),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon == Icons.arrow_back ? Icons.arrow_back_ios_new : icon,
+            size: icon == Icons.arrow_back ? 18 : size,
+            color: _dark,
+          ),
         ),
       );
 

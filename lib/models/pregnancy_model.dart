@@ -4,13 +4,17 @@ class PregnancyModel {
   final DateTime? startDate;
   final String userName;
   final int age;
-  final int? manualWeek; // Fallback if no start date
+  final int? manualWeek;
+  final String? photoLocalPath;
+  final String? photoUrl;
 
   const PregnancyModel({
     this.startDate,
     this.userName   = 'Sarah',
     this.age        = 27,
     this.manualWeek,
+    this.photoLocalPath,
+    this.photoUrl,
   });
 
   factory PregnancyModel.defaults() => PregnancyModel(
@@ -80,11 +84,20 @@ class PregnancyModel {
 
   bool get hasData => startDate != null || manualWeek != null;
 
-  PregnancyModel copyWith({DateTime? startDate, String? userName, int? age, int? manualWeek}) =>
+  PregnancyModel copyWith({
+    DateTime? startDate,
+    String? userName,
+    int? age,
+    int? manualWeek,
+    String? photoLocalPath,
+    String? photoUrl,
+  }) =>
       PregnancyModel(
-        startDate:  startDate  ?? this.startDate,
-        userName:   userName   ?? this.userName,
-        age:        age        ?? this.age,
+        startDate: startDate ?? this.startDate,
+        userName: userName ?? this.userName,
+        age: age ?? this.age,
         manualWeek: manualWeek ?? this.manualWeek,
+        photoLocalPath: photoLocalPath ?? this.photoLocalPath,
+        photoUrl: photoUrl ?? this.photoUrl,
       );
 }

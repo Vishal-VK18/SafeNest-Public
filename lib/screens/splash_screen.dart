@@ -10,6 +10,8 @@ import 'home_dashboard_screen.dart';
 import 'home_wrapper.dart';
 import 'onboarding/onboarding_screen.dart';
 
+import '../core/services/auth_flow_manager.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -22,61 +24,45 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _ctrl;
   late Animation<double>   _fadeAnim;
   late Animation<double>   _scaleAnim;
+  late Animation<Offset> _slideAnim;
 
   @override
   void initState() {
     super.initState();
+    // 1000ms animation + 200ms delay as per HTML design = 1200ms total
     _ctrl = AnimationController(
-      vsync:    this,
-      duration: const Duration(milliseconds: 900),
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     );
-    _fadeAnim  = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
-    _scaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack),
+
+    // Lady animation starts after 200ms (0.166 interval of 1200ms)
+    final curve = CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.166, 1.0, curve: Curves.easeOut),
     );
+
+    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(curve);
+    _scaleAnim = Tween<double>(begin: 0.88, end: 1.0).animate(curve);
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.05), // approx 16px relative to container
+      end: Offset.zero,
+    ).animate(curve);
+
     _ctrl.forward();
 
-    // Splash waits 3 seconds then routes.
-    // Biometric auth happens inside HomeWrapper — NOT here.
-    Future.delayed(const Duration(seconds: 3), _navigate);
+    // Determine initial route after splash animation
+    Future.delayed(const Duration(seconds: 2), _navigate);
   }
 
-  void _navigate() {
+  Future<void> _navigate() async {
     if (!mounted) return;
+    
+    final destination = await AuthFlowManager.getInitialRoute();
+    debugPrint('[SafeNest Splash] Determining route: $destination');
 
-    if (kDevMode) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeDashboardScreen()),
-      );
-      return;
-    }
-
-    final isOnboardingComplete = StorageService.isOnboardingComplete;
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-    final isLoggedIn = firebaseUser != null;
-
-    if (!isOnboardingComplete) {
-      // First ever launch — show onboarding then login
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-      );
-      return;
-    }
-
-    if (isLoggedIn) {
-      // Already logged in — show single launch page then dashboard
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeWrapper()),
-      );
-      return;
-    }
-
-    // Signed out — show onboarding again
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-    );
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(destination, (route) => false);
   }
-
 
   @override
   void dispose() {
@@ -84,109 +70,84 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // ── Blush gradient background
+          // ── Blush gradient background ─────────────────────────────────────
+          // linear-gradient(145deg, #FFB899 0%, #FFC8A8 40%, #FFCACB 100%)
           Positioned.fill(
             child: Container(
-              decoration: const BoxDecoration(gradient: BlushGradients.background),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFFB899),
+                    Color(0xFFFFC8A8),
+                    Color(0xFFFFCACB),
+                  ],
+                  stops: [0.0, 0.4, 1.0],
+                ),
+              ),
             ),
           ),
-          // ── Content
-          FadeTransition(
-            opacity: _fadeAnim,
-            child: ScaleTransition(
-              scale: _scaleAnim,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // ── Logo ──────────────────────────────────────────────────
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white, width: 6),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const Icon(Icons.favorite, color: Colors.white, size: 44),
+
+          // ── Top Glow Softener ─────────────────────────────────────────────
+          // radial-gradient(circle, rgba(255,215,180,0.45) 0%, transparent 70%)
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.08,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: 360,
+                height: 360,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFFFD7B4).withValues(alpha: 0.45),
+                      Colors.transparent,
                     ],
+                    stops: const [0.0, 0.7],
                   ),
                 ),
-                const SizedBox(height: 28),
-
-                // ── App name ───────────────────────────────────────────────
-                Text(
-                  'SafeNest',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize:      38,
-                    fontWeight:    FontWeight.w600,
-                    color:         Colors.white,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // ── Tagline ────────────────────────────────────────────────
-                Text(
-                  'Gentle care. Always connected.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize:      17,
-                    fontWeight:    FontWeight.w400,
-                    color:         Colors.white.withValues(alpha: 0.82),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 48),
-
-                // ── Subtitle tagline ───────────────────────────────────────
-                Text(
-                  'MONITORING VITALS & SAFETY',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize:      10,
-                    fontWeight:    FontWeight.w500,
-                    letterSpacing: 3,
-                    color:         Colors.white.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // ── iOS-style home indicator ───────────────────────────────
-                Container(
-                  width: 120,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color:        Colors.white.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ), // Close ScaleTransition
-      ), // Close FadeTransition
-        ], // Close Stack children
-      ), // Close Stack
-    ); // Close Scaffold
+
+          // ── Content ───────────────────────────────────────────────────────
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: ScaleTransition(
+                scale: _scaleAnim,
+                child: SlideTransition(
+                  position: _slideAnim,
+                  child: Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFA05028).withValues(alpha: 0.22),
+                          blurRadius: 40,
+                          offset: const Offset(0, 16),
+                        ),
+                      ],
+                    ),
+                    child: Image.asset(
+                      'assets/images/safenest_splash_lady.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

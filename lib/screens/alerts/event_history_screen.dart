@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../models/safety_event_model.dart';
 import '../../providers/providers.dart';
+import '../../widgets/safe_nest_bottom_navigation.dart';
+
 
 class EventHistoryScreen extends ConsumerStatefulWidget {
   final VoidCallback? onBack;
@@ -30,36 +32,44 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFFC09D),
-              Color(0xFFFFCACB),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(context),
-              _buildFilterChips(),
-              Expanded(
-                child: filteredHistory.isEmpty 
-                  ? _buildEmptyState()
-                  : _buildTimeline(filteredHistory),
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
+      bottomNavigationBar: const SafeNestBottomNavigation(),
+
+      body: Stack(
+        children: [
+          // Background Gradient
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+                ),
               ),
-              _buildMonitoringActiveBanner(),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
-        ),
+          
+          SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context),
+                _buildFilterChips(),
+                Expanded(
+                  child: filteredHistory.isEmpty 
+                    ? _buildEmptyState()
+                    : _buildTimeline(filteredHistory),
+                ),
+                _buildMonitoringActiveBanner(),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -155,69 +165,85 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.history_outlined, size: 56, color: const Color(0xFF6F6F6F).withValues(alpha: 0.5)),
+          Icon(Icons.history_outlined, size: 56, color: const Color(0xFF6F6F6F).withOpacity(0.5)),
           const SizedBox(height: 16),
           Text(
             'No events recorded',
-            style: GoogleFonts.inter(color: const Color(0xFF6F6F6F), fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'All clear! The wearable is monitoring.',
-            style: GoogleFonts.inter(color: const Color(0xFF6F6F6F), fontSize: 13),
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF181818).withOpacity(0.5),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTimeline(List<SafetyEventModel> events) {
+  Widget _buildTimeline(List<SafetyEventModel> items) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      itemCount: events.length,
-      itemBuilder: (context, i) {
-        final event = events[i];
-        bool showHeader = false;
-        String headerText = '';
-        
-        DateTime eventDay = DateTime(event.timestamp.year, event.timestamp.month, event.timestamp.day);
-        
-        if (i == 0 || DateTime(events[i-1].timestamp.year, events[i-1].timestamp.month, events[i-1].timestamp.day) != eventDay) {
-          showHeader = true;
-          if (eventDay == today) headerText = 'TODAY';
-          else if (eventDay == yesterday) headerText = 'YESTERDAY';
-          else headerText = DateFormat('MMMM d').format(eventDay).toUpperCase();
-        }
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
 
-        return Column(
-          children: [
-            if (showHeader) ...[
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Text(
-                    headerText,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF9A9A9A),
-                      letterSpacing: 2.0,
-                    ),
+          itemCount: items.length,
+          itemBuilder: (context, i) {
+            final event = items[i];
+            bool showHeader = false;
+            String headerText = '';
+            
+            DateTime eventDay = DateTime(event.timestamp.year, event.timestamp.month, event.timestamp.day);
+            
+            if (i == 0 || DateTime(items[i-1].timestamp.year, items[i-1].timestamp.month, items[i-1].timestamp.day) != eventDay) {
+              showHeader = true;
+              if (eventDay == today) headerText = 'TODAY';
+              else if (eventDay == yesterday) headerText = 'YESTERDAY';
+              else headerText = DateFormat('MMMM d').format(eventDay).toUpperCase();
+            }
+
+            return Column(
+              children: [
+                if (showHeader) ...[
+                  if (i > 0) const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Text(
+                        headerText,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF9A9A9A),
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(child: Divider(color: Color(0xFFF4D2C8), thickness: 1)),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(child: Divider(color: Color(0xFFF4D2C8), thickness: 1)),
+                  const SizedBox(height: 24),
                 ],
-              ),
-              const SizedBox(height: 24),
-            ],
-            _buildTimelineItem(event, isLast: i == events.length - 1),
-          ],
-        );
-      },
+                _buildTimelineItem(event, isLast: i == items.length - 1),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -299,7 +325,7 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
                         ),
                       ),
                       Text(
-                        DateFormat('dd MMM yyyy • HH:mm').format(event.timestamp),
+                        DateFormat('HH:mm').format(event.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
@@ -317,39 +343,6 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
                       height: 1.5,
                     ),
                   ),
-                  if (event.status == SafetyEventStatus.resolved) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE6F7EE),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF2E7D5B),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'RESOLVED',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF2E7D5B),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -392,11 +385,9 @@ class _EventHistoryScreenState extends ConsumerState<EventHistoryScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0xFFFFC09D).withOpacity(0.2), width: 2),
-                image: const DecorationImage(
-                  image: NetworkImage('https://lh3.googleusercontent.com/aida-public/AB6AXuCA5goerGPltcfI5R0W3SJrj9HhBPI2loAT_utskaOrbmBEl8VDUmQeEqyY5xugVXDsPB5I6S7WCVouzEHlZZjTjtD3BBiu4E9lydpjouOISGGWTsktcjhmXXaWo29M2fGp3ICAx6TI-E6tPBU7HHXgg0u_Q6I2Jz718F1KlyIBdQqXP54Hb5XslnJBslIa6TrZbyZRf6lOg610uLbsTwtVRqeclBBfShQtzg8ois_bXTm3I4AM4Df7vDMKtiiVaCT5MPmP9ph6_r-V'),
-                  fit: BoxFit.cover,
-                ),
+                color: const Color(0xFFFFC09D).withOpacity(0.3),
               ),
+              child: const Icon(Icons.person, color: Color(0xFF181818)),
             ),
             const SizedBox(width: 16),
             Expanded(
