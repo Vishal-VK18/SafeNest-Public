@@ -380,7 +380,7 @@ class TemperaturePage extends ConsumerWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const TemperatureLogPage(),
+            builder: (context) => TemperatureLogPage(),
           ),
         );
       },

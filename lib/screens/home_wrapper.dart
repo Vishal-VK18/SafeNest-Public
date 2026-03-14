@@ -101,7 +101,7 @@ class _HomeWrapperState extends State<HomeWrapper> {
         } else {
           // User skipped → send them to login for safety
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            MaterialPageRoute(builder: (_) => LoginScreen()),
             (_) => false,
           );
         }
@@ -172,6 +172,6 @@ class _HomeWrapperState extends State<HomeWrapper> {
   Widget build(BuildContext context) {
     // Always show the dashboard — the biometric gate runs on top as a dialog.
     // This means no blocking loading screen is shown; auth feels immediate.
-    return const HomeDashboardScreen();
+    return HomeDashboardScreen();
   }
 }

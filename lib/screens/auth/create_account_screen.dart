@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../providers/providers.dart';
+import '../../core/constants/route_constants.dart';
+import '../../core/services/auth_flow_manager.dart';
 import '../../services/auth_service.dart';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
@@ -124,7 +126,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       ref.read(pregnancyProvider.notifier).updateStartDate(_pregnancyStartDate!);
     }
 
-    Navigator.of(context).pushReplacementNamed('/home');
+    // SafeNest Auth Flow Manager
+    await AuthFlowManager.onLoginSuccess();
+
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(RouteConstants.dashboard, (route) => false);
   }
 
   // ─── Pregnancy date picker ────────────────────────────────────────────────
@@ -203,11 +209,39 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                           children: [
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: IconButton(
-                                icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF181818), size: 20),
-                                onPressed: () => Navigator.pop(context),
-                                padding: EdgeInsets.zero,
-                                alignment: Alignment.centerLeft,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  debugPrint('[SafeNest Nav] ← Back tapped: CreateAccountScreen');
+                                  debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+                                  if (Navigator.of(context).canPop()) {
+                                    Navigator.of(context).pop();
+                                  } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+                                    Navigator.of(context, rootNavigator: true).pop();
+                                  } else {
+                                    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                                      RouteConstants.dashboard, (route) => false,
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.40),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.50),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    color: Color(0xFF181818),
+                                    size: 18,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -647,8 +681,12 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         name:  account.displayName ?? '',
         email: account.email,
       );
+      
+      // SafeNest Auth Flow Manager
+      await AuthFlowManager.onLoginSuccess();
+      
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
+      Navigator.of(context).pushNamedAndRemoveUntil(RouteConstants.dashboard, (route) => false);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);

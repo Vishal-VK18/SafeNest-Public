@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
+import '../../core/constants/route_constants.dart';
+import '../../core/services/auth_flow_manager.dart';
 
 const _primary     = Color(0xFFBCAFD0);
 const _primaryDark = Color(0xFF8E7DA0);
@@ -89,7 +91,11 @@ class _OtpScreenState extends State<OtpScreen> {
     if (error != null) {
       setState(() => _errorMsg = error);
     } else {
-      Navigator.of(context).pushNamedAndRemoveUntil('/home', (r) => false);
+      // SafeNest Auth Flow Manager
+      await AuthFlowManager.onLoginSuccess();
+
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(RouteConstants.dashboard, (r) => false);
     }
   }
 
@@ -100,9 +106,38 @@ class _OtpScreenState extends State<OtpScreen> {
       appBar: AppBar(
         backgroundColor: _bgLight,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: _primaryDark),
-          onPressed: () => Navigator.pop(context),
+        leading: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            debugPrint('[SafeNest Nav] ← Back tapped: OtpScreen');
+            debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+              Navigator.of(context, rootNavigator: true).pop();
+            } else {
+              Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                RouteConstants.dashboard, (route) => false,
+              );
+            }
+          },
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.40),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.50),
+                width: 1,
+              ),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Color(0xFF181818),
+              size: 18,
+            ),
+          ),
         ),
         title: Text(
           'OTP Verification',

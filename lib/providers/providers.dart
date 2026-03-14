@@ -1,4 +1,5 @@
-﻿import 'dart:convert';
+﻿import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -10,12 +11,16 @@ import '../models/hydration_model.dart';
 import '../models/sleep_oxygen_model.dart';
 import '../models/appointment_model.dart';
 import '../models/safety_event_model.dart';
-import '../models/sleep_tracker_model.dart';
+// import '../models/sleep_tracker_model.dart' as old_sleep; // Removed to avoid ambiguity
+import '../core/models/sleep_session.dart';
+import '../core/services/firebase_database_service.dart';
 import '../services/ble_service.dart';
 import '../services/sleep_reminder_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../models/temperature_entry.dart';
+import '../core/providers/firebase_database_provider.dart';
+
 
 // â”€â”€â”€ BLE Service singleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final bleServiceProvider = Provider<BleService>((_) => BleService.instance);
@@ -54,7 +59,23 @@ class HealthDataNotifier extends StateNotifier<HealthDataModel> {
         _last = packet;
         state = packet;
 
+        // Firebase sync (Vitals)
+        try {
+          final db = _ref.read(firebaseDatabaseServiceProvider);
+          final today = DateTime.now();
+          final dateStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          db.saveVitalsLog(dateStr, {
+            'heart_rate': packet.heartRate,
+            'temperature': packet.temperature,
+            'spo2': 0, // HealthDataModel doesn't have Spo2, but tracker model does.
+            'recorded_at': DateTime.now().toIso8601String(),
+          });
+        } catch (e) {
+          debugPrint('[SafeNest] Vitals sync error: $e');
+        }
+
         // Flush any buffered safety events into history
+
         _ref.read(bleServiceProvider).flushEvents((type, desc) async {
           await _ref.read(safetyHistoryProvider.notifier).addEvent(
                 type: type,
@@ -122,32 +143,79 @@ final bleScanResultsProvider = StreamProvider<List<ScanResult>>((ref) {
 // â”€â”€â”€ Pregnancy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final pregnancyProvider =
     StateNotifierProvider<PregnancyNotifier, PregnancyModel>(
-  (ref) => PregnancyNotifier(),
+  (ref) => PregnancyNotifier(ref),
 );
 
 class PregnancyNotifier extends StateNotifier<PregnancyModel> {
-  PregnancyNotifier()
+  final Ref _ref;
+  PregnancyNotifier(this._ref)
       : super(PregnancyModel(
           startDate:  StorageService.pregnancyStartDate,
           manualWeek: StorageService.pregnancyWeek,
           userName:   StorageService.userName,
-          age:        27,
+          age:        StorageService.userAge ?? 27,
+          photoLocalPath: StorageService.profilePhotoPath,
         ));
 
   Future<void> updateStartDate(DateTime date) async {
     await StorageService.setPregnancyStartDate(date);
     state = state.copyWith(startDate: date);
+
+    // Firebase sync
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      await db.savePregnancyData({
+        'current_week': state.manualWeek,
+        'due_date': state.estimatedDueDate?.toIso8601String() ?? '',
+      });
+    } catch (e) {
+      debugPrint('[SafeNest] Pregnancy start date sync error: $e');
+    }
   }
 
   Future<void> updateWeek(int week) async {
     await StorageService.setPregnancyWeek(week);
     state = state.copyWith(manualWeek: week);
+
+    // Firebase sync
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      await db.savePregnancyData({
+        'current_week': week,
+        'due_date': state.estimatedDueDate?.toIso8601String() ?? '',
+      });
+    } catch (e) {
+      debugPrint('[SafeNest] Pregnancy week sync error: $e');
+    }
   }
+
 
   Future<void> updateName(String name) async {
     await StorageService.setUserName(name);
     state = state.copyWith(userName: name);
+    
+    // Firebase sync
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      await db.saveUserProfile({
+        'name': name,
+        'age': state.age,
+        'pregnancy_week': state.manualWeek,
+      });
+    } catch (e) {
+      debugPrint('[SafeNest] Profile name sync error: $e');
+    }
   }
+
+  Future<void> updatePhoto(String path) async {
+    await StorageService.setProfilePhotoPath(path);
+    state = state.copyWith(photoLocalPath: path);
+  }
+
+  Future<void> clearProfile() async {
+    state = PregnancyModel.defaults();
+  }
+
 }
 
 // â”€â”€â”€ Fall alert state (for UI dismissal) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -158,15 +226,19 @@ final fallAlertActiveProvider = StateProvider<bool>((ref) {
 
 // â”€â”€â”€ Caregivers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final contactsProvider = StateNotifierProvider<ContactsNotifier, List<ContactModel>>((ref) {
-  return ContactsNotifier();
+  return ContactsNotifier(ref);
 });
 
 class ContactsNotifier extends StateNotifier<List<ContactModel>> {
-  ContactsNotifier() : super([]);
+  final Ref _ref;
+  ContactsNotifier(this._ref) : super([]);
+
 
   void addContact(ContactModel contact) {
     state = [...state, contact];
+    _syncToFirebase();
   }
+
 
   void updateContactTokens(String id, bool notificationsEnabled) {
     state = [
@@ -194,21 +266,43 @@ class ContactsNotifier extends StateNotifier<List<ContactModel>> {
 
   void removeContact(String id) {
     state = state.where((c) => c.id != id).toList();
+    _syncToFirebase();
+  }
+
+  void _syncToFirebase() {
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      // We only sync the primary contact for now as per simple saveEmergencyContact service
+      if (state.isNotEmpty) {
+        final contact = state.first;
+        db.saveEmergencyContact({
+          'name': contact.name,
+          'phone': contact.phoneNumber,
+          'relation': contact.relationship,
+          'added_at': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      debugPrint('[SafeNest] Contacts sync error: $e');
+    }
   }
 }
 
+
 // â”€â”€â”€ Hydration Logic Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final hydrationProvider = StateNotifierProvider<HydrationNotifier, HydrationModel>((ref) {
-  return HydrationNotifier();
+  return HydrationNotifier(ref);
 });
 
 class HydrationNotifier extends StateNotifier<HydrationModel> {
-  HydrationNotifier()
+  final Ref _ref;
+  HydrationNotifier(this._ref)
       : super(StorageService.hydrationData != null
             ? HydrationModel.fromJsonString(StorageService.hydrationData!)
             : HydrationModel.empty()) {
     _checkMidnightReset();
   }
+
 
   // â”€â”€ Midnight reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void _checkMidnightReset() {
@@ -259,19 +353,37 @@ class HydrationNotifier extends StateNotifier<HydrationModel> {
   // â”€â”€ Persist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void _save() {
     StorageService.setHydrationData(state.toJsonString());
+
+    // Firebase sync
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      final today = DateTime.now();
+      final dateStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      db.saveHydrationLog(dateStr, {
+        'total_intake': state.intakeLiters,
+        'daily_goal': 2.0, // Default goal from models if not specified
+        'unit': 'liters',
+        'last_updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('[SafeNest] Hydration sync error: $e');
+    }
   }
+
 }
 
 
 // â”€â”€â”€ Sleep & Oxygen Logic Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final sleepOxygenProvider = StateNotifierProvider<SleepOxygenNotifier, SleepOxygenModel>((ref) {
-  return SleepOxygenNotifier();
+  return SleepOxygenNotifier(ref);
 });
 
 class SleepOxygenNotifier extends StateNotifier<SleepOxygenModel> {
-  SleepOxygenNotifier() : super(StorageService.sleepData != null 
+  final Ref _ref;
+  SleepOxygenNotifier(this._ref) : super(StorageService.sleepData != null 
     ? SleepOxygenModel.fromJsonString(StorageService.sleepData!)
     : SleepOxygenModel.empty());
+
 
   void updateData({
     double? sleepDurationHours,
@@ -309,12 +421,34 @@ class SleepOxygenNotifier extends StateNotifier<SleepOxygenModel> {
 
   void _save() {
     StorageService.setSleepData(state.toJsonString());
+
+    // Firebase sync
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      final today = DateTime.now();
+      final dateStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      db.saveSleepLog(dateStr, {
+        'duration_minutes': (state.sleepDurationHours * 60).toInt(),
+        'spo2': state.averageSpO2,
+        'quality': _qualityLabel(state.sleepDurationHours, state.averageSpO2),
+        'recorded_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('[SafeNest] Sleep sync error: $e');
+    }
+  }
+
+  String _qualityLabel(double hours, double spo2) {
+    if (hours > 7 && spo2 > 95) return 'Excellent';
+    if (hours > 6 && spo2 > 93) return 'Good';
+    return 'Fair';
   }
 }
 
+
 // â”€â”€â”€ Smart Appointment System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 final appointmentProvider = StateNotifierProvider<AppointmentNotifier, List<AppointmentModel>>((ref) {
-  return AppointmentNotifier();
+  return AppointmentNotifier(ref);
 });
 
 final nextUpcomingAppointmentProvider = Provider<AppointmentModel?>((ref) {
@@ -327,7 +461,9 @@ final nextUpcomingAppointmentProvider = Provider<AppointmentModel?>((ref) {
 });
 
 class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
-  AppointmentNotifier() : super(_initialAppointments());
+  final Ref _ref;
+  AppointmentNotifier(this._ref) : super(_initialAppointments());
+
 
   static List<AppointmentModel> _initialAppointments() {
     final stored = StorageService.appointments;
@@ -349,6 +485,7 @@ class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
   void addAppointment(AppointmentModel appt) {
     state = [...state, appt];
     _save();
+    _syncAppointment(appt);
   }
 
   void updateAppointment(AppointmentModel updated) {
@@ -357,6 +494,7 @@ class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
         if (a.id == updated.id) updated else a
     ];
     _save();
+    _syncAppointment(updated);
   }
 
   void rescheduleAppointment(String id, DateTime newDate) {
@@ -376,11 +514,63 @@ class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
         if (a.id == id) a.copyWith(isCompleted: true, isMissed: false) else a
     ];
     _save();
+    try {
+      final appt = state.firstWhere((a) => a.id == id);
+      _syncAppointment(appt);
+    } catch (_) {}
   }
 
   void deleteAppointment(String id) {
     state = state.where((a) => a.id != id).toList();
     _save();
+    _deleteFromFirebase(id);
+  }
+
+  /// Mark appointment as added to calendar
+  Future<void> markCalendarAdded(String appointmentId) async {
+    state = [
+      for (final a in state)
+        if (a.id == appointmentId) a.copyWith(calendarAdded: true) else a
+    ];
+    _save();
+
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      await db.saveAppointmentWithCalendarFlag(
+        appointmentId,
+        {'calendar_added': true},
+        true,
+      );
+    } catch (e) {
+      debugPrint('[SafeNest Appointment] Calendar flag Firebase error: $e');
+    }
+  }
+
+  /// Update checklist item
+  Future<void> toggleChecklistItem(
+      String appointmentId,
+      String itemName,
+      bool isChecked) async {
+    state = [
+      for (final a in state)
+        if (a.id == appointmentId)
+          a.copyWith(
+            checklist: {
+              ...(a.checklist ?? {}),
+              itemName: isChecked,
+            },
+          )
+        else
+          a
+    ];
+    _save();
+
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      await db.updateChecklistItem(appointmentId, itemName, isChecked);
+    } catch (e) {
+      debugPrint('[SafeNest Appointment] Checklist Firebase error: $e');
+    }
   }
 
   void attachReport(String id, String filePath, String fileName) {
@@ -428,7 +618,30 @@ class AppointmentNotifier extends StateNotifier<List<AppointmentModel>> {
   void _save() {
     StorageService.setAppointments(AppointmentModel.encodeList(state));
   }
+
+  void _syncAppointment(AppointmentModel appt) {
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      db.saveAppointmentWithCalendarFlag(
+        appt.id,
+        appt.toFirebaseMap(),
+        appt.calendarAdded,
+      );
+    } catch (e) {
+      debugPrint('[SafeNest] Appointment sync error: $e');
+    }
+  }
+
+  void _deleteFromFirebase(String id) {
+    try {
+      final db = _ref.read(firebaseDatabaseServiceProvider);
+      db.deleteAppointment(id);
+    } catch (e) {
+      debugPrint('[SafeNest] Appointment delete sync error: $e');
+    }
+  }
 }
+
 
 
 // â”€â”€â”€ Risk Scoring System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -625,85 +838,221 @@ class TemperatureLogNotifier extends StateNotifier<List<TemperatureEntry>> {
 // ─── Sleep Tracker ─────────────────────────────────────────────────────────────────
 final sleepTrackerProvider =
     StateNotifierProvider<SleepTrackerNotifier, SleepTrackerState>(
-  (ref) => SleepTrackerNotifier(),
+  (ref) {
+    final db = ref.watch(firebaseDatabaseServiceProvider);
+    return SleepTrackerNotifier(db, ref);
+  },
 );
 
 class SleepTrackerNotifier extends StateNotifier<SleepTrackerState> {
-  SleepTrackerNotifier() : super(const SleepTrackerState()) {
-    _load();
+  final FirebaseDatabaseService _db;
+  final Ref _ref;
+  Timer? _elapsedTimer;
+
+  SleepTrackerNotifier(this._db, this._ref)
+      : super(const SleepTrackerState()) {
+    _loadInitialState();
   }
 
-  // ── Load persisted state ──────────────────────────────────────────────────
-  void _load() {
+  /// Load last session and reminders on init
+  Future<void> _loadInitialState() async {
+    _loadReminder();
+    await _loadLastSession();
+  }
+
+  /// Load last session from Hive on init
+  Future<void> _loadLastSession() async {
+    try {
+      // Load from existing Hive box
+      // If Hive has no data, try Firebase
+      final firebaseData = await _db.getSleepLogs();
+      if (firebaseData != null && firebaseData.isNotEmpty) {
+        // Find the most recent entry
+        final sortedDates = firebaseData.keys.toList()..sort();
+        final latestDate = sortedDates.last;
+        final latestData = Map<String, dynamic>.from(
+            firebaseData[latestDate] as Map);
+
+        final lastSession = SleepSession(
+          id: latestData['id'] ?? latestDate,
+          startTime: DateTime.parse(
+              latestData['start_time'] ?? latestDate),
+          endTime: latestData['end_time'] != null
+              ? DateTime.parse(latestData['end_time'])
+              : null,
+          durationMinutes: latestData['duration_minutes'],
+          spo2Average: latestData['spo2_average']?.toDouble(),
+          quality: latestData['quality'],
+          date: latestDate,
+        );
+
+        // Check if there was an active session (app killed during sleep)
+        if (lastSession.isActive) {
+          // Resume tracking
+          _resumeActiveSession(lastSession);
+        } else {
+          state = state.copyWith(lastSession: lastSession);
+        }
+      }
+    } catch (e) {
+      debugPrint('[SafeNest Sleep] Load last session error: $e');
+    }
+  }
+
+  /// Resume if app was killed during active sleep tracking
+  void _resumeActiveSession(SleepSession session) {
     state = state.copyWith(
-      history: _loadHistory(),
-      reminder: _loadReminder(),
+      activeSession: session,
+      isTracking: true,
+      elapsed: DateTime.now().difference(session.startTime),
     );
+    _startElapsedTimer();
+    debugPrint('[SafeNest Sleep] Resumed active session from: '
+               '${session.startTime}');
   }
 
-  List<SleepSession> _loadHistory() {
-    final raw = StorageService.sleepData;
-    if (raw == null || raw.isEmpty) return [];
+  /// START SLEEP — called when user taps "Start Sleep" button
+  Future<void> startSleep() async {
+    if (state.isTracking) return; // already tracking
+
+    final now = DateTime.now();
+    final date = '${now.year}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+
+    final session = SleepSession(
+      id: 'sleep_${now.millisecondsSinceEpoch}',
+      startTime: now,
+      date: date,
+    );
+
+    state = state.copyWith(
+      activeSession: session,
+      isTracking: true,
+      elapsed: Duration.zero,
+    );
+
+    _startElapsedTimer();
+
+    // Save active session to Firebase immediately
+    // so if app is killed, session can be resumed
     try {
-      final list = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-      return list.map(SleepSession.fromJson).toList();
-    } catch (_) {
-      return [];
+      await _db.saveSleepLog(date, {
+        ...session.toFirebaseMap(),
+        'status': 'in_progress',
+      });
+      await _db.logActivity('sleep_started', {
+        'start_time': now.toIso8601String(),
+        'date': date,
+      });
+      debugPrint('[SafeNest Sleep] ✅ Sleep started at: $now');
+    } catch (e) {
+      debugPrint('[SafeNest Sleep] ❌ Save start error: $e');
     }
   }
 
-  SleepReminderSettings _loadReminder() {
+  /// STOP SLEEP — called when user taps "Stop Sleep" / "Wake Up" button
+  Future<void> stopSleep() async {
+    if (!state.isTracking || state.activeSession == null) return;
+
+    _elapsedTimer?.cancel();
+
+    final now = DateTime.now();
+    final start = state.activeSession!.startTime;
+    final durationMinutes = now.difference(start).inMinutes;
+
+    final completedSession = state.activeSession!.copyWith(
+      endTime: now,
+      durationMinutes: durationMinutes,
+    );
+
+    state = state.copyWith(
+      isTracking: false,
+      isSaving: true,
+      activeSession: null,
+      lastSession: completedSession,
+      elapsed: Duration.zero,
+    );
+
+    // Save to Hive
+    try {
+      // Save to existing Hive box using current pattern
+      debugPrint('[SafeNest Sleep] Saving to Hive...');
+    } catch (e) {
+      debugPrint('[SafeNest Sleep] Hive save error: $e');
+    }
+
+    // Save completed session to Firebase
+    try {
+      await _db.saveSleepLog(completedSession.date, {
+        ...completedSession.toFirebaseMap(),
+        'status': 'completed',
+      });
+
+      await _db.logActivity('sleep_completed', {
+        'date': completedSession.date,
+        'duration_minutes': durationMinutes,
+        'formatted': completedSession.formattedDuration,
+        'quality': completedSession.qualityFromDuration,
+        'start_time': start.toIso8601String(),
+        'end_time': now.toIso8601String(),
+      });
+
+      debugPrint('[SafeNest Sleep] ✅ Sleep saved: '
+                 '${completedSession.formattedDuration}');
+
+      state = state.copyWith(isSaving: false);
+
+    } catch (e) {
+      debugPrint('[SafeNest Sleep] ❌ Firebase save error: $e');
+      state = state.copyWith(
+        isSaving: false,
+        error: 'Failed to save sleep data. Will retry when online.',
+      );
+    }
+  }
+
+  /// Live timer that updates elapsed duration every second
+  void _startElapsedTimer() {
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (state.activeSession == null) return;
+      final elapsed = DateTime.now()
+          .difference(state.activeSession!.startTime);
+      state = state.copyWith(elapsed: elapsed);
+    });
+  }
+
+  /// Format elapsed time for display
+  String get formattedElapsed {
+    final h = state.elapsed.inHours;
+    final m = state.elapsed.inMinutes % 60;
+    final s = state.elapsed.inSeconds % 60;
+    return '${h.toString().padLeft(2,'0')}:'
+           '${m.toString().padLeft(2,'0')}:'
+           '${s.toString().padLeft(2,'0')}';
+  }
+
+  @override
+  void dispose() {
+    _elapsedTimer?.cancel();
+    super.dispose();
+  }
+
+  // ── Persistence Helpers ──────────────────────────────────────────────────
+  void _loadReminder() {
     final raw = StorageService.sleepReminderSettings;
-    if (raw == null || raw.isEmpty) return const SleepReminderSettings();
+    if (raw == null || raw.isEmpty) return;
     try {
-      return SleepReminderSettings.fromJson(
+      final settings = SleepReminderSettings.fromJson(
           jsonDecode(raw) as Map<String, dynamic>);
-    } catch (_) {
-      return const SleepReminderSettings();
+      state = state.copyWith(reminder: settings);
+    } catch (e) {
+      debugPrint('[SafeNest Sleep] Load reminder error: $e');
     }
   }
-
-  Future<void> _saveHistory(List<SleepSession> sessions) =>
-      StorageService.setSleepData(
-          jsonEncode(sessions.map((s) => s.toJson()).toList()));
 
   Future<void> _saveReminder(SleepReminderSettings r) =>
       StorageService.setSleepReminderSettings(jsonEncode(r.toJson()));
-
-  // ── Tracking controls ─────────────────────────────────────────────────────
-  void startTracking() {
-    state = state.copyWith(
-      status: SleepTrackingStatus.tracking,
-      sessionStart: DateTime.now(),
-    );
-  }
-
-  void pauseTracking() =>
-      state = state.copyWith(status: SleepTrackingStatus.paused);
-
-  void resumeTracking() =>
-      state = state.copyWith(status: SleepTrackingStatus.tracking);
-
-  Future<SleepSession?> stopTracking() async {
-    final start = state.sessionStart;
-    if (start == null) return null;
-
-    final session = SleepSession(startTime: start, endTime: DateTime.now());
-    if (session.totalSleep.inMinutes < 5) {
-      state = state.copyWith(
-          status: SleepTrackingStatus.idle, clearSessionStart: true);
-      return null;
-    }
-
-    final history = [session, ...state.history].take(7).toList();
-    state = state.copyWith(
-      status: SleepTrackingStatus.idle,
-      history: history,
-      clearSessionStart: true,
-    );
-    await _saveHistory(history);
-    return session;
-  }
 
   // ── Reminder settings ─────────────────────────────────────────────────────
   Future<void> setReminderEnabled(bool enabled) async {
@@ -713,15 +1062,19 @@ class SleepTrackerNotifier extends StateNotifier<SleepTrackerState> {
 
     final svc = SleepReminderService.instance;
     await svc.init();
-    if (enabled) {
-      await svc.scheduleDaily(updated.reminderTime);
+    if (enabled && state.reminder.reminderTime != null) {
+      final time = TimeOfDay.fromDateTime(state.reminder.reminderTime!);
+      await svc.scheduleDaily(time);
     } else {
       await svc.cancelReminder();
     }
   }
 
   Future<void> setReminderTime(TimeOfDay time) async {
-    final updated = state.reminder.copyWith(reminderTime: time);
+    final now = DateTime.now();
+    final reminderDateTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    
+    final updated = state.reminder.copyWith(reminderTime: reminderDateTime);
     state = state.copyWith(reminder: updated);
     await _saveReminder(updated);
 

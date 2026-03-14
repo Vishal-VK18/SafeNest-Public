@@ -8,10 +8,17 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/providers.dart';
 import '../services/auth_service.dart';
+import '../core/constants/route_constants.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_theme.dart';
+import '../widgets/safe_nest_bottom_navigation.dart';
+import '../core/providers/firebase_database_provider.dart';
+import '../core/constants/route_constants.dart';
+import '../core/services/auth_flow_manager.dart';
 import 'caregiver_management_screen.dart';
+
+
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -30,7 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     _biometricEnabled  = StorageService.biometricEnabled;
-    _profilePhotoPath  = StorageService.profilePhotoPath;
   }
 
   Future<void> _onSignOut() async {
@@ -62,8 +68,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await AuthService.signOut();
     try { await GoogleSignIn().signOut(); } catch (_) {}
 
+    // SafeNest Auth Flow Manager
+    await ref.read(pregnancyProvider.notifier).clearProfile();
+    await AuthFlowManager.onSignOut();
+
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    Navigator.of(context).pushNamedAndRemoveUntil(RouteConstants.login, (route) => false);
   }
 
   Future<void> _onBiometricToggle(bool val) async {
@@ -275,12 +285,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         await StorageService.setUserAge(age);
                       }
                       if (pickedPhotoPath != null) {
-                        await StorageService.setProfilePhotoPath(
-                            pickedPhotoPath!);
+                        await ref.read(pregnancyProvider.notifier).updatePhoto(pickedPhotoPath!);
                       }
                       if (!sheetCtx.mounted) return;
                       Navigator.pop(sheetCtx);
-                      setState(() => _profilePhotoPath = pickedPhotoPath);
                     },
                     child: Text('Save Changes',
                         style: GoogleFonts.inter(
@@ -298,6 +306,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final pregnancy = ref.watch(pregnancyProvider);
+    _profilePhotoPath = pregnancy.photoLocalPath;
     final contacts = ref.watch(contactsProvider);
     
     // Gradient Background
@@ -310,7 +319,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFAF8), // creamy
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
+      bottomNavigationBar: const SafeNestBottomNavigation(),
+
       body: Stack(
         children: [
           // Background Base Map to content-layer styles
@@ -335,11 +348,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            debugPrint('[SafeNest Nav] ← Back tapped: ProfileScreen');
+                            debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                            } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+                              Navigator.of(context, rootNavigator: true).pop();
+                            } else {
+                              Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                                RouteConstants.dashboard,
+                                (route) => false,
+                              );
+                            }
+                          },
                           child: Container(
-                            width: 40, height: 40,
-                            alignment: Alignment.centerLeft,
-                            child: const Icon(Icons.arrow_back_ios, color: Color(0xFF181818), size: 20),
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.40),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.50),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Color(0xFF181818),
+                              size: 18,
+                            ),
                           ),
                         ),
                       ),
@@ -373,7 +413,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
                     child: Column(
                       children: [
                         // Profile Banner (Editable Hero Card)
@@ -480,7 +520,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               title: 'Emergency Contact Access',
                               trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF6B6B6B), size: 16),
                               onTap: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => const CaregiverManagementScreen()));
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => CaregiverManagementScreen()));
                               },
                             ),
                             _buildSectionItem(
@@ -545,6 +585,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
+
   }
 
   Widget _buildGroupedCardWrapper({required List<Widget> children}) {

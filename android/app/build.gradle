@@ -41,6 +41,7 @@ android {
     defaultConfig {
         applicationId "com.safenest.safenest"
         minSdkVersion flutter.minSdkVersion
+
         targetSdk 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

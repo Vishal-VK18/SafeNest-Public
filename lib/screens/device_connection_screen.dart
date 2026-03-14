@@ -337,158 +337,159 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
       ),
     );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFFAF8), // creamy
-      body: Stack(
-        children: [
-          // Background
-          Positioned.fill(
+    return Stack(
+      children: [
+        // Background
+        Positioned.fill(
+          child: Container(
+            decoration: gradientDecoration,
             child: Container(
-              decoration: gradientDecoration,
-              child: Container(
-                color: Colors.white.withOpacity(0.25), // Backdrop blur equivalent
-              ),
+              color: Colors.white.withOpacity(0.25), // Backdrop blur equivalent
             ),
           ),
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            width: 40, height: 40,
-                            alignment: Alignment.centerLeft,
-                            child: const Icon(Icons.arrow_back_ios, color: Color(0xFF181818), size: 20),
-                          ),
+        ),
+        SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Container(
+                          width: 40, height: 40,
+                          alignment: Alignment.centerLeft,
+                          child: const Icon(Icons.arrow_back_ios, color: Color(0xFF181818), size: 20),
                         ),
                       ),
-                      Text(
-                        'Device Hub',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF181818).withOpacity(0.7),
+                    ),
+                    Text(
+                      'Device Hub',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF181818).withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 24, bottom: 24),
+                  child: Text(
+                    'Devices',
+                    style: GoogleFonts.inter(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF181818),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 90),
+                  child: Column(
+                    children: [
+                      // Watch Card
+                      _buildDeviceCard(
+                        type: 'Wearable',
+                        deviceName: 'SafeNest',
+                        icon: Icons.watch_rounded,
+                        status: deviceStatus.watch.status,
+                        onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                        batteryPct: ref.watch(healthDataProvider).bandBattery,
+                        signalPct: deviceStatus.watch.signalLevel,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // SIM Card — only show if band is connected (SIM is part of band)
+                      if (deviceStatus.watch.status == ConnectionStatus.connected) ...[
+                        _buildDeviceCard(
+                          type: 'SIM Module',
+                          deviceName: 'SafeNest SIM',
+                          icon: Icons.sim_card_rounded,
+                          status: ref.watch(healthDataProvider).simSignal > 0
+                              ? ConnectionStatus.connected
+                              : ConnectionStatus.disconnected,
+                          onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
+                          batteryPct: ref.watch(healthDataProvider).simBattery,
+                          signalPct: deviceStatus.simUnit.signalLevel,
+                        ),
+                        const SizedBox(height: 24),
+                      ] else ...[
+                        _buildSimOfflineCard(),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Nearby devices scan section
+                      _buildScanSection(),
+                      const SizedBox(height: 24),
+
+                      // System Toggles
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.white.withOpacity(0.5)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 24,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            _buildToggleRow(
+                              title: 'Bluetooth',
+                              subtitle: isBluetoothOn ? 'Enabled' : 'Disabled',
+                              subtitleColor: isBluetoothOn ? Colors.green[500]! : Colors.grey[500]!,
+                              icon: Icons.bluetooth,
+                              iconColor: Colors.blue[500]!,
+                              iconBg: Colors.blue[50]!,
+                              value: isBluetoothOn,
+                              onChanged: (val) => ref.read(systemServiceProvider).turnOnBluetooth(),
+                              showBorder: true,
+                            ),
+                            _buildToggleRow(
+                              title: 'WiFi',
+                              subtitle: isWifiOn ? 'Connected to WiFi' : 'Disconnected',
+                              subtitleColor: isWifiOn ? Colors.green[500]! : Colors.grey[500]!,
+                              icon: Icons.wifi,
+                              iconColor: Colors.indigo[500]!,
+                              iconBg: Colors.indigo[50]!,
+                              value: isWifiOn,
+                              onChanged: (val) => ref.read(systemServiceProvider).openWiFiSettings(),
+                              showBorder: false,
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 24, bottom: 24),
-                    child: Text(
-                      'Devices',
-                      style: GoogleFonts.inter(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF181818),
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 0, 28, 120),
-                    child: Column(
-                      children: [
-                        // Watch Card
-                        _buildDeviceCard(
-                          type: 'Wearable',
-                          deviceName: 'SafeNest',
-                          icon: Icons.watch_rounded,
-                          status: deviceStatus.watch.status,
-                          onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                          batteryPct: ref.watch(healthDataProvider).bandBattery,
-                          signalPct: deviceStatus.watch.signalLevel,
-                        ),
-                        const SizedBox(height: 24),
-
-                        // SIM Card — only show if band is connected (SIM is part of band)
-                        if (deviceStatus.watch.status == ConnectionStatus.connected) ...[
-                          _buildDeviceCard(
-                            type: 'SIM Module',
-                            deviceName: 'SafeNest SIM',
-                            icon: Icons.sim_card_rounded,
-                            status: ref.watch(healthDataProvider).simSignal > 0
-                                ? ConnectionStatus.connected
-                                : ConnectionStatus.disconnected,
-                            onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                            batteryPct: ref.watch(healthDataProvider).simBattery,
-                            signalPct: deviceStatus.simUnit.signalLevel,
-                          ),
-                          const SizedBox(height: 24),
-                        ] else ...[
-                          _buildSimOfflineCard(),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Nearby devices scan section
-                        _buildScanSection(),
-                        const SizedBox(height: 24),
-
-                        // System Toggles
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white.withOpacity(0.5)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 24,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              _buildToggleRow(
-                                title: 'Bluetooth',
-                                subtitle: isBluetoothOn ? 'Enabled' : 'Disabled',
-                                subtitleColor: isBluetoothOn ? Colors.green[500]! : Colors.grey[500]!,
-                                icon: Icons.bluetooth,
-                                iconColor: Colors.blue[500]!,
-                                iconBg: Colors.blue[50]!,
-                                value: isBluetoothOn,
-                                onChanged: (val) => ref.read(systemServiceProvider).turnOnBluetooth(),
-                                showBorder: true,
-                              ),
-                              _buildToggleRow(
-                                title: 'WiFi',
-                                subtitle: isWifiOn ? 'Connected to WiFi' : 'Disconnected',
-                                subtitleColor: isWifiOn ? Colors.green[500]! : Colors.grey[500]!,
-                                icon: Icons.wifi,
-                                iconColor: Colors.indigo[500]!,
-                                iconBg: Colors.indigo[50]!,
-                                value: isWifiOn,
-                                onChanged: (val) => ref.read(systemServiceProvider).openWiFiSettings(),
-                                showBorder: false,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

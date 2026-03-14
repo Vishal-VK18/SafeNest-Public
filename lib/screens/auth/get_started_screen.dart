@@ -1,6 +1,7 @@
 // PLACEHOLDER — REPLACE WITH FINAL GET STARTED UI
 import 'package:flutter/material.dart';
 import '../../core/constants/route_constants.dart';
+import '../../core/services/auth_flow_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class GetStartedScreen extends StatelessWidget {
@@ -64,8 +65,11 @@ class GetStartedScreen extends StatelessWidget {
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, RouteConstants.login);
+                    onPressed: () async {
+                      await AuthFlowManager.onGetStartedCompleted();
+                      if (context.mounted) {
+                        Navigator.pushNamed(context, RouteConstants.login);
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,

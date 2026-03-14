@@ -5,6 +5,9 @@ import 'dart:math' as math;
 import '../../../models/hydration_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/hydration_reminder_service.dart';
+import '../../../widgets/safe_nest_bottom_navigation.dart';
+import '../../../core/constants/route_constants.dart';
+
 
 class HydrationTrackerScreen extends ConsumerStatefulWidget {
   final int initialPage;
@@ -57,149 +60,36 @@ class _HydrationTrackerScreenState extends ConsumerState<HydrationTrackerScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFDFB),
-      body: Stack(
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
+
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          PageView(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              _HydrationDashboardSlide(
-                onAddWater: (amt) => _addWater(amt / 1000.0),
-                onGoToStats: () => goToPage(1),
-                onGoToReminders: () => goToPage(2),
-                onPop: () => Navigator.pop(context),
-                ref: ref,
-              ),
-              _HydrationStatsSlide(
-                onBack: () => goToPage(0),
-              ),
-              _HydrationRemindersSlide(
-                onBack: () => goToPage(0),
-                onToggleReminders: _onReminderToggle,
-                ref: ref,
-              ),
-            ],
+          _HydrationDashboardSlide(
+            onAddWater: (amt) => _addWater(amt / 1000.0),
+            onGoToStats: () => goToPage(1),
+            onGoToReminders: () => goToPage(2),
+            onPop: () => Navigator.pop(context),
+            ref: ref,
           ),
-          // Floating pill nav — mirrors HomeDashboardScreen exactly
-          Positioned(
-            left: 0, right: 0, bottom: 16,
-            child: _buildBottomNav(context),
+          _HydrationStatsSlide(
+            onBack: () => goToPage(0),
+          ),
+          _HydrationRemindersSlide(
+            onBack: () => goToPage(0),
+            onToggleReminders: _onReminderToggle,
+            ref: ref,
           ),
         ],
       ),
+      bottomNavigationBar: const SafeNestBottomNavigation(),
     );
   }
 
-  Widget _buildBottomNav(BuildContext context) {
-    return Center(
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFFC09D).withOpacity(0.2),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // 0 — Home
-            _buildNavItem(
-              icon: Icons.grid_view_rounded, label: 'Home', selected: false,
-              onTap: () {
-                ref.read(selectedTabProvider.notifier).state = 0;
-                Navigator.pop(context);
-              },
-            ),
-            // 1 — Journey (active — we are here)
-            _buildNavItem(
-              icon: Icons.auto_graph_rounded, label: 'Journey', selected: true,
-              onTap: () {
-                ref.read(selectedTabProvider.notifier).state = 1;
-                Navigator.pop(context);
-              },
-            ),
-            // 2 — Devices
-            _buildNavItem(
-              icon: Icons.watch_rounded, label: 'Devices', selected: false,
-              onTap: () {
-                ref.read(selectedTabProvider.notifier).state = 2;
-                Navigator.pop(context);
-              },
-            ),
-            // 3 — Alerts
-            _buildNavItem(
-              icon: Icons.notifications_rounded, label: 'Alerts', selected: false,
-              onTap: () {
-                ref.read(selectedTabProvider.notifier).state = 3;
-                Navigator.pop(context);
-              },
-            ),
-            // 4 — Profile
-            _buildNavItem(
-              icon: Icons.person_rounded, label: 'Profile', selected: false,
-              onTap: () {
-                ref.read(selectedTabProvider.notifier).state = 4;
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 58,
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFF181818) : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: selected
-                ? const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))]
-                : null,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: selected ? Colors.white : const Color(0xFFFFC09D),
-                size: 20,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : const Color(0xFFFFC09D),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 }
 
 // -----------------------------------------------------------------------------
@@ -282,15 +172,37 @@ class _HydrationDashboardSlide extends StatelessWidget {
                   children: [
                     // Back button
                     GestureDetector(
-                      onTap: onPop,
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        debugPrint('[SafeNest Nav] ← Back tapped: HydrationTrackerScreen');
+                        debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+                          Navigator.of(context, rootNavigator: true).pop();
+                        } else {
+                          Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                            RouteConstants.dashboard, (route) => false,
+                          );
+                        }
+                      },
                       child: Container(
-                        width: 40, height: 40,
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Colors.white.withValues(alpha: 0.40),
                           shape: BoxShape.circle,
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.50),
+                            width: 1,
+                          ),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF181818), size: 16),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Color(0xFF181818),
+                          size: 18,
+                        ),
                       ),
                     ),
                     // Title
@@ -322,7 +234,8 @@ class _HydrationDashboardSlide extends StatelessWidget {
               // Main Body
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+
                   child: Column(
                     children: [
                       // Progress Card
@@ -639,7 +552,8 @@ class _HydrationStatsSlideState extends ConsumerState<_HydrationStatsSlide> {
               // Body
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+
                   child: Column(
                     children: [
                       // Weekly Chart
@@ -852,6 +766,7 @@ class _HydrationRemindersSlide extends StatelessWidget {
 
                 Expanded(
                   child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 110),
                     child: Column(
                       children: [
                         // Progress Circle

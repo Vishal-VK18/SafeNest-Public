@@ -22,6 +22,8 @@ class RouteConstants {
   static const String temperatureLog = '/temperature-log';
   static const String fallEventLog   = '/fall-event-log';
   static const String simStatus      = '/sim-status';
+  static const String logsDetail     = '/logs-detail';
+
 
   // Journey
   static const String hydration          = '/hydration';
