@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/providers.dart';
 import '../../core/constants/route_constants.dart';
+import '../../widgets/safe_nest_bottom_navigation.dart';
+
 
 // ─── Blush palette ────────────────────────────────────────────────────────────
 const _coral     = Color(0xFFE9A48E);
@@ -43,7 +45,12 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
+      bottomNavigationBar: const SafeNestBottomNavigation(),
+
       body: Stack(
+
         children: [
           // ── Blush gradient background ──
           Positioned.fill(
@@ -67,26 +74,56 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
               children: [
                 // ── Header ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 16, 4),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: _dark, size: 20),
-                        onPressed: () => Navigator.pop(context),
-                        padding: EdgeInsets.zero,
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          debugPrint('[SafeNest Nav] ← Back tapped: VitalsScreen');
+                          debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+                            Navigator.of(context, rootNavigator: true).pop();
+                          } else {
+                            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                              RouteConstants.dashboard,
+                              (route) => false,
+                            );
+                          }
+                        },
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.40),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.50),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Color(0xFF181818),
+                            size: 18,
+                          ),
+                        ),
                       ),
                       Expanded(
                         child: Text(
                           _tabTitle(_selectedTab),
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: _dark,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF181818),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 40), // balance back button
+                      const SizedBox(width: 44),
                     ],
                   ),
                 ),
@@ -112,14 +149,24 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
 
                 // ── Content ──
                 Expanded(
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                    child: _selectedTab == 0
-                        ? _HeartRateTab(ref: ref)
-                        : _selectedTab == 1
-                            ? _TemperatureTab(ref: ref)
-                            : const _FallDetectionTab(),
+                  child: IndexedStack(
+                    index: _selectedTab,
+                    children: [
+                      SingleChildScrollView(
+                        controller: _selectedTab == 0 ? _scrollController : null,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                        child: _HeartRateTab(ref: ref),
+                      ),
+                      SingleChildScrollView(
+                        controller: _selectedTab == 1 ? _scrollController : null,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                        child: _TemperatureTab(ref: ref),
+                      ),
+                      const SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                        child: _FallDetectionTab(),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -143,17 +190,24 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          debugPrint('[SafeNest Nav] Vitals tab switched to: $idx ($label)');
           setState(() => _selectedTab = idx);
           _scrollController.jumpTo(0);
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: active ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(50),
             boxShadow: active
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))]
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
                 : null,
           ),
           child: Text(
@@ -162,7 +216,7 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? _dark : Colors.grey[500],
+              color: active ? _dark : _dark.withValues(alpha: 0.5),
             ),
           ),
         ),

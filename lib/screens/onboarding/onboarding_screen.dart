@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../auth/login_screen.dart';
+import '../home_dashboard_screen.dart';
+import '../../core/constants/route_constants.dart';
+import '../../core/services/auth_flow_manager.dart';
 import '../../widgets/onboarding_slide.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -46,24 +49,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _completeAndNavigate() async {
-    await StorageService.setOnboardingComplete(true);
+    await AuthFlowManager.onGetStartedCompleted();
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      RouteConstants.login,
+      (route) => false,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        physics: const BouncingScrollPhysics(),
-        children: [
-          _buildSlide1(),
-          _buildSlide2(),
-          _buildSlide3(),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_currentPage.round() > 0) {
+          _pageController.previousPage(
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutCubic,
+          );
+        } else {
+          // If on first slide, we could either do nothing or allow pop if really needed.
+          // According to requirements: "Pressing back on onboarding slides should move between slides only."
+          // "It must NOT return to LaunchScreen."
+          // So we keep canPop: false and do nothing on the first slide.
+        }
+      },
+      child: Scaffold(
+        body: PageView(
+          controller: _pageController,
+          physics: const BouncingScrollPhysics(),
+          children: [
+            _buildSlide1(),
+            _buildSlide2(),
+            _buildSlide3(),
+          ],
+        ),
       ),
     );
   }
@@ -181,8 +202,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       index: 2,
       currentPage: _currentPage,
       totalPages: 3,
-      title: 'Book online\nappointment',
-      description: 'Instantly connect with expert doctors from the comfort of your home.',
+      title: 'Stay Safe with\nSmart Monitoring',
+      description: 'Real-time vitals tracking and fall detection help keep you and your baby safe throughout pregnancy.',
       backgroundDecoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -198,13 +219,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-                ],
+                color: const Color(0xFF1F4E4A),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Icons.eco, color: Color(0xFFFFC09D)),
+              child: const Icon(Icons.favorite, color: Colors.white, size: 22),
             ),
             const SizedBox(height: 4),
             const Text(
@@ -219,95 +237,100 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
       ),
-      imageWidget: Stack(
-        children: [
-          Positioned.fill(child: Container(color: Colors.white.withOpacity(0.9))),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 120, 32, 0),
-            child: Container(
-                height: MediaQuery.of(context).size.height * 0.45,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(40),
-                  border: Border.all(color: Colors.white.withOpacity(0.5)),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 40, offset: const Offset(0, 20))],
+      imageWidget: Center(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 220),
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Glass card background
+                Container(
+                  width: 280,
+                  height: 280,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.75),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFF4A38C).withOpacity(0.15),
+                        blurRadius: 32,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
                 ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.network(
-                              'https://lh3.googleusercontent.com/aida-public/AB6AXuBneNQF3RGGdZq4L4PBL5DakA5i_f4s2K62Cbz5LYWsu0yIVsmecWRAjgn4qvMzAeEEYno_tizXyZVTt_K_pQFS3BRy4gjsp9x10St8Ec05EznMGGXOX8qVW-U2X4EQBa-0T_vJuTdkfUiV6T0HtBm19lMZSDbL5cvC0oBckCQb3QW2TyvdOKaXgUJIVuXeKq4N9uii8acbUz_StgsFrdGQwmVh-08FDu_IFpXsG_07bgGBKyZ8gNsQUaJUnc7QjFpw1yZ1v1q7JqaP',
-                              fit: BoxFit.cover,
-                            ),
-                            Positioned(
-                              top: 12,
-                              left: 12,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 8, height: 8,
-                                      decoration: const BoxDecoration(color: Color(0xFFFFC09D), shape: BoxShape.circle),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Text('04:20', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF181818))),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 12,
-                              right: 12,
-                              child: Container(
-                                width: 96,
-                                height: 128,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    'https://lh3.googleusercontent.com/aida-public/AB6AXuBlW9m3A68ESZyH0Xm_WxKwlg3csoNBkU1XzyvYn7u48oYJtPuLtFuwsuN7TSoAXpW2oDlrm5DQQAAYwD8GxTzNp-0Vfsc4tcfkJ-ki6F0JjF-iaeDVpsBu-Punzb_4zTnTgnrjraYyM0rRtQjwrAlqRIacFeOaOPPUp-5sg0fLpeF_EevEA1GlYG5skhGeDfWyUTqXVaFE443_dhVBuYZxENKxxIZYYCvQb-6R3xv9XL4lKHWP6o2kOG8LFMzdy6FGDM35RdSoHOXk',
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                // Spinning peach dashed ring
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(seconds: 10),
+                  builder: (_, v, child) => Transform.rotate(
+                    angle: v * 6.283,
+                    child: child,
+                  ),
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFF4A38C),
+                        width: 2,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildCallIcon(Icons.mic, Colors.grey[200]!, Colors.grey[600]!),
-                        const SizedBox(width: 16),
-                        _buildCallIcon(Icons.call_end, const Color(0xFFFF6B6B), Colors.white),
-                        const SizedBox(width: 16),
-                        _buildCallIcon(Icons.videocam, Colors.grey[200]!, Colors.grey[600]!),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                // Centre icon
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8EEE9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.watch_outlined, size: 56, color: Color(0xFFF4A38C)),
+                ),
+                // Heart badge (top-right)
+                Positioned(
+                  top: 52,
+                  right: 34,
+                  child: _slideBadge(Icons.favorite, const Color(0xFFF4A38C)),
+                ),
+                // Check badge (bottom-left)
+                Positioned(
+                  bottom: 52,
+                  left: 34,
+                  child: _slideBadge(Icons.check_circle, const Color(0xFF1F4E4A)),
+                ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
       onGetStarted: _onGetStarted,
       onSignIn: _onSignIn,
+    );
+  }
+
+  Widget _slideBadge(IconData icon, Color color) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: color, size: 20),
     );
   }
 

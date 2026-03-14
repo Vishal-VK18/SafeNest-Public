@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:safenest/core/services/calendar_service.dart';
+import '../../core/providers/firebase_database_provider.dart';
 import '../../models/appointment_model.dart';
 import '../../providers/providers.dart';
 import '../profile_screen.dart';
+import '../../core/constants/route_constants.dart';
 
 class AppointmentDetailsScreen extends ConsumerStatefulWidget {
   const AppointmentDetailsScreen({super.key});
@@ -19,6 +22,35 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
     {'title': 'Ultrasound', 'checked': false},
     {'title': 'Vaccine', 'checked': false},
   ];
+
+  bool _isAddingToCalendar = false;
+  bool _calendarAdded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncAppointmentToFirebase();
+    });
+  }
+
+  Future<void> _syncAppointmentToFirebase() async {
+    try {
+      final appointments = ref.read(appointmentProvider);
+      final targetAppt = appointments.firstWhere((a) => !a.isCompleted, orElse: () => null as dynamic);
+      if (targetAppt != null) {
+        final db = ref.read(firebaseDatabaseServiceProvider);
+        await db.saveAppointmentWithCalendarFlag(
+          targetAppt.id,
+          targetAppt.toFirebaseMap(),
+          targetAppt.calendarAdded,
+        );
+        debugPrint('[SafeNest Appointment] ✅ Details synced on screen open');
+      }
+    } catch (e) {
+      debugPrint('[SafeNest Appointment] Sync on open error: $e');
+    }
+  }
 
   Future<void> _reschedule(AppointmentModel appt) async {
     final newDate = await showDatePicker(
@@ -266,7 +298,10 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildHeaderButton(Icons.arrow_back, () => Navigator.pop(context)),
+                        _buildHeaderButton(Icons.arrow_back, () {
+                          debugPrint('[SafeNest Nav] Appointment Details back button tapped');
+                          Navigator.pop(context);
+                        }),
                         Text(
                           'Appointment',
                           style: GoogleFonts.inter(
@@ -275,10 +310,13 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
                             color: const Color(0xFF181818),
                           ),
                         ),
-                        _buildHeaderButton(Icons.more_vert, () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                        )),
+                        _buildHeaderButton(Icons.more_vert, () {
+                          debugPrint('[SafeNest Nav] Appointment Details settings tapped');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -402,30 +440,103 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
                         Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
-                            ),
+                            gradient: _calendarAdded || targetAppt.calendarAdded
+                                ? null
+                                : const LinearGradient(
+                                    colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
+                                  ),
+                            color: (_calendarAdded || targetAppt.calendarAdded) ? const Color(0xFFF4E4DE) : null,
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 4))],
+                            boxShadow: (_calendarAdded || targetAppt.calendarAdded) ? null : const [BoxShadow(color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 4))],
                           ),
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text('Added ${targetAppt.title} to Device Calendar'),
-                                  backgroundColor: const Color(0xFF40916C),
-                                ));
+                              onTap: _isAddingToCalendar ? null : () async {
+                                setState(() { _isAddingToCalendar = true; });
+
+                                try {
+                                  // 1. Add to device calendar
+                                  final success = await CalendarService.addAppointmentToCalendar(
+                                    targetAppt,
+                                  );
+
+                                  if (success) {
+                                    // 2. Mark calendar added in provider
+                                    await ref.read(appointmentProvider.notifier)
+                                        .markCalendarAdded(targetAppt.id);
+
+                                    // 3. Show success feedback
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              const Icon(Icons.check_circle, color: Color(0xFF79B39B)),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Added to calendar and synced to cloud',
+                                                style: GoogleFonts.inter(
+                                                  color: const Color(0xFF181818),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          backgroundColor: const Color(0xFFF8EEE9),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    // 4. Update button to show "Added" state
+                                    setState(() { _calendarAdded = true; });
+
+                                  } else {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Could not open calendar. Please try again.',
+                                          ),
+                                          backgroundColor: Color(0xFFE9A48E),
+                                        ),
+                                      );
+                                    }
+                                  }
+
+                                } catch (e) {
+                                  debugPrint('[SafeNest Calendar] Button error: $e');
+                                } finally {
+                                  if (mounted) {
+                                    setState(() { _isAddingToCalendar = false; });
+                                  }
+                                }
                               },
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.event_note, color: Color(0xFF181818)),
-                                    const SizedBox(width: 8),
-                                    Text('Add to Calendar', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF181818))),
+                                    if (_isAddingToCalendar)
+                                      const SizedBox(
+                                        width: 20, height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE9A48E)),
+                                      )
+                                    else ...[
+                                      Icon(
+                                        (_calendarAdded || targetAppt.calendarAdded) ? Icons.check_circle : Icons.event_note, 
+                                        color: const Color(0xFF181818)
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        (_calendarAdded || targetAppt.calendarAdded) ? 'Added to Calendar' : 'Add to Calendar', 
+                                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF181818))
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -441,9 +552,12 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
                           children: _checklist.map((item) {
                             return GestureDetector(
                               onTap: () {
-                                setState(() {
-                                  item['checked'] = !item['checked'];
-                                });
+                                final isChecked = targetAppt.checklist?[item['title']] ?? item['checked'];
+                                ref.read(appointmentProvider.notifier).toggleChecklistItem(
+                                  targetAppt.id,
+                                  item['title'],
+                                  !isChecked,
+                                );
                               },
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -461,11 +575,11 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
                                     Container(
                                       width: 24, height: 24,
                                       decoration: BoxDecoration(
-                                        color: item['checked'] ? const Color(0xFFF2C6B8).withOpacity(0.2) : Colors.white.withOpacity(0.2),
+                                        color: (targetAppt.checklist?[item['title']] ?? item['checked']) ? const Color(0xFFF2C6B8).withOpacity(0.2) : Colors.white.withOpacity(0.2),
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: item['checked'] ? Colors.transparent : const Color(0xFFF2C6B8).withOpacity(0.4)),
+                                        border: Border.all(color: (targetAppt.checklist?[item['title']] ?? item['checked']) ? Colors.transparent : const Color(0xFFF2C6B8).withOpacity(0.4)),
                                       ),
-                                      child: item['checked'] ? const Icon(Icons.check, size: 18, color: Color(0xFFF2C6B8)) : null,
+                                      child: (targetAppt.checklist?[item['title']] ?? item['checked']) ? const Icon(Icons.check, size: 18, color: Color(0xFFF2C6B8)) : null,
                                     ),
                                   ],
                                 ),
@@ -536,16 +650,41 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
 
   Widget _buildHeaderButton(IconData icon, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (icon == Icons.arrow_back || icon == Icons.arrow_back_ios_new) {
+          debugPrint('[SafeNest Nav] ← Back tapped: AppointmentDetailsScreen');
+          debugPrint('[SafeNest Nav] canPop: ${Navigator.of(context).canPop()}');
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+            Navigator.of(context, rootNavigator: true).pop();
+          } else {
+            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+              RouteConstants.dashboard, (route) => false,
+            );
+          }
+        } else {
+          onTap();
+        }
+      },
       child: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.4),
+          color: Colors.white.withValues(alpha: 0.40),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.5)),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.50),
+            width: 1,
+          ),
         ),
-        child: Icon(icon, color: const Color(0xFF181818), size: 24),
+        child: Icon(
+          icon == Icons.arrow_back ? Icons.arrow_back_ios_new : icon,
+          color: const Color(0xFF181818),
+          size: 18,
+        ),
       ),
     );
   }

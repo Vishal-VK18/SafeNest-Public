@@ -11,6 +11,8 @@ import 'emergency_alert_screen.dart';
 import 'profile_screen.dart';
 import 'alerts/event_history_screen.dart';
 import '../models/safety_event_model.dart';
+import '../widgets/safe_nest_bottom_navigation.dart';
+
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -38,103 +40,40 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
     final _selectedTab = ref.watch(selectedTabProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.bgLight,
-      body: SafeArea(
-        child: Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedTab != 0) {
+          ref.read(selectedTabProvider.notifier).state = 0;
+        } else {
+          // You could allow exit here if needed, but per requirements we maintain stable nav.
+          // For now, we do nothing to keep them on dashboard as per "stable" hint.
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bgLight,
+        extendBody: true,
+        resizeToAvoidBottomInset: false,
+        body: IndexedStack(
+          index: _selectedTab,
           children: [
-            IndexedStack(
-              index: _selectedTab,
-              children: [
-                const DashboardTab(),
-                JourneyTab(onSwitchTab: (i) => ref.read(selectedTabProvider.notifier).state = i),
-                const DeviceConnectionScreen(),
-                EventHistoryScreen(
-                  onBack: () => ref.read(selectedTabProvider.notifier).state = 0,
-                ),
-                const SettingsScreen(),
-              ],
+            const DashboardTab(),
+            JourneyTab(onSwitchTab: (i) => ref.read(selectedTabProvider.notifier).state = i),
+            const DeviceConnectionScreen(),
+            EventHistoryScreen(
+              onBack: () => ref.read(selectedTabProvider.notifier).state = 0,
             ),
-            // Floating pill nav bar
-            Positioned(
-              left: 0, right: 0, bottom: 16,
-              child: _buildBottomNav(),
-            ),
+            const SettingsScreen(),
           ],
         ),
+        bottomNavigationBar: const SafeNestBottomNavigation(),
       ),
     );
   }
 
-  Widget _buildBottomNav() {
-    return Center(
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFFC09D).withOpacity(0.2), // shadow-peach/20
-              blurRadius: 24, // shadow-2xl equivalent ish
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildNavItem(0, Icons.grid_view_rounded, 'Home'),
-            _buildNavItem(1, Icons.auto_graph_rounded, 'Journey'),
-            _buildNavItem(2, Icons.watch_rounded, 'Devices'),
-            _buildNavItem(3, Icons.notifications_rounded, 'Alerts'),
-            _buildNavItem(4, Icons.person_rounded, 'Profile'),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final selected = ref.watch(selectedTabProvider) == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => ref.read(selectedTabProvider.notifier).state = index,
-        child: Container(
-          height: 58,
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFF181818) : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: selected ? const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))] : null,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: selected ? Colors.white : const Color(0xFFFFC09D),
-                size: 20,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 8.5, // Slightly smaller to ensure fit
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : const Color(0xFFFFC09D),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Future<void> _showSOSModal() async {
     if (_sosVisible) return;
@@ -152,7 +91,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     await showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      pageBuilder: (context, _, __) => const EmergencyAlertScreen(),
+      pageBuilder: (context, _, __) => EmergencyAlertScreen(),
     );
 
     _sosVisible = false;

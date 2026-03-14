@@ -58,5 +58,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '666197967686',
     projectId: 'safenest-5bbc2',
     storageBucket: 'safenest-5bbc2.firebasestorage.app',
+    databaseURL: 'https://safenest-5bbc2-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
+
 }

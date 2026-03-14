@@ -1,5 +1,6 @@
 // lib/screens/auth/login_screen.dart
 import 'dart:async';
+import '../../core/constants/route_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +9,9 @@ import '../../utils/blush_theme.dart';
 import '../../services/auth_service.dart';
 import 'create_account_screen.dart';
 import 'otp_screen.dart';
-import '../../core/constants/route_constants.dart';
+import '../../core/providers/firebase_database_provider.dart';
+import '../../core/services/auth_flow_manager.dart';
+
 
 // ─── Colors matched to design ─────────────────────────────────────────────────
 const _primary      = Color(0xFFBCAFD0);
@@ -72,8 +75,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (error != null) {
       setState(() => _errorMsg = error);
     } else {
+      // SafeNest Auth Flow Manager
+      await AuthFlowManager.onLoginSuccess();
+      
+      // Firebase Session Log
+      try {
+        ref.read(firebaseDatabaseServiceProvider).logSessionStart();
+      } catch (_) {}
+      
+      if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(RouteConstants.dashboard, (route) => false);
     }
+
   }
 
   // ─── Continue with Phone → OTP screen ────────────────────────────────────
@@ -114,6 +127,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         name:  account.displayName ?? '',
         email: account.email,
       );
+
+      // SafeNest Auth Flow Manager
+      await AuthFlowManager.onLoginSuccess();
 
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(RouteConstants.dashboard, (route) => false);

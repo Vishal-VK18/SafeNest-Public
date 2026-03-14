@@ -20,7 +20,7 @@ class HydrationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.lilacAccent.withOpacity(0.5),
+        color: AppColors.blush.withOpacity(0.2),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.primary.withOpacity(0.1)),
       ),
@@ -41,7 +41,7 @@ class HydrationCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.water_drop, color: AppColors.lavenderText, size: 24),
+            child: const Icon(Icons.water_drop, color: Color(0xFFE9A48E), size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -56,7 +56,7 @@ class HydrationCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.lavenderText,
+                        color: const Color(0xFFE9A48E),
                       ),
                     ),
                     Text(
@@ -64,7 +64,7 @@ class HydrationCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.lavenderText.withOpacity(0.5),
+                        color: const Color(0xFFE9A48E).withOpacity(0.5),
                         letterSpacing: 1,
                       ),
                     ),
@@ -75,7 +75,7 @@ class HydrationCard extends StatelessWidget {
                   'Keep yourself and your baby hydrated. Aim for $totalLiters liters today.',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: AppColors.lavenderText.withOpacity(0.8),
+                    color: const Color(0xFFE9A48E).withOpacity(0.8),
                     height: 1.4,
                   ),
                 ),
@@ -93,7 +93,7 @@ class HydrationCard extends StatelessWidget {
                     widthFactor: progress,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.primaryDark,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -108,7 +108,7 @@ class HydrationCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.lavenderText.withOpacity(0.6),
+                        color: const Color(0xFFE9A48E).withOpacity(0.6),
                         letterSpacing: 1,
                       ),
                     ),
@@ -121,7 +121,7 @@ class HydrationCard extends StatelessWidget {
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.lavenderText,
+                          color: const Color(0xFFE9A48E),
                           decoration: TextDecoration.underline,
                           letterSpacing: 1,
                         ),

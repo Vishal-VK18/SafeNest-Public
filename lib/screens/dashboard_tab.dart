@@ -1,8 +1,12 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/providers.dart';
+import '../core/models/log_parameter.dart';
+
 import '../models/device_status_model.dart';
+import '../models/sleep_tracker_model.dart';
 import '../core/constants/route_constants.dart';
 import 'profile_screen.dart';
 import 'journey/appointment_details_screen.dart';
@@ -20,70 +24,67 @@ class DashboardTab extends ConsumerWidget {
     final isConnected = deviceState.watch.status == ConnectionStatus.connected;
     final hasData = health.receivedAt.year > 2000;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          // Background Gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
-                ),
+    return Stack(
+      children: [
+        // Background Gradient
+        Positioned.fill(
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [Color(0xFFFFC09D), Color(0xFFFFCACB)],
               ),
             ),
           ),
-          // Radial diffusion overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.4),
-                  radius: 1.0,
-                  colors: [
-                    Colors.white.withOpacity(0.5),
-                    Colors.white.withOpacity(0.2),
-                  ],
-                  stops: const [0.0, 1.0],
-                ),
-              ),
-            ),
-          ),
-          
-          SafeArea(
-            bottom: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildHeader(context, pregnancy),
-                  const SizedBox(height: 16),
-                  _buildHeartRateCard(context, isConnected, hasData, health),
-                  const SizedBox(height: 16),
-                  _buildBodyTempCard(context, isConnected, hasData, health),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: _buildSleepCard(context)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildHydrationCard(context)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildFallDetectionCard(context),
-                  const SizedBox(height: 16),
-                  _buildUpcomingAppointmentCard(context, ref),
+        ),
+        // Radial diffusion overlay
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, -0.4),
+                radius: 1.0,
+                colors: [
+                  Colors.white.withOpacity(0.5),
+                  Colors.white.withOpacity(0.2),
                 ],
+                stops: const [0.0, 1.0],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        
+        SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(context, pregnancy),
+                const SizedBox(height: 16),
+                _buildHeartRateCard(context, isConnected, hasData, health),
+                const SizedBox(height: 16),
+                _buildBodyTempCard(context, isConnected, hasData, health),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _buildSleepCard(context, ref)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildHydrationCard(context, ref)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildFallDetectionCard(context),
+                const SizedBox(height: 16),
+                _buildUpcomingAppointmentCard(context, ref),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -96,7 +97,7 @@ class DashboardTab extends ConsumerWidget {
           GestureDetector(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              MaterialPageRoute(builder: (context) => SettingsScreen()),
             ),
             child: Row(
               children: [
@@ -107,10 +108,15 @@ class DashboardTab extends ConsumerWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
                     boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
-                    image: const DecorationImage(
-                      image: NetworkImage('https://lh3.googleusercontent.com/aida-public/AB6AXuDxUahFZlLNPAFNq6UMAo6AhmVyEcbrAw9JrWGNMU0Zj1QWPwC_-dtX6XKTzfePUG6v4ut9P4ww6C2pkRR-tK0ACDfpzRaP-yTdCPqbJzJ7OR0_yGJaISJWceJKVcEGPVnFG-vt3aQRzsBvHEL-P43TS2N5veQ4V_l3XJlhtbiTSvqYfdm6t5x0-vFhMOFzkl-UoxPaj3vOQmA0R4vP3LEk2SeK4HIeGKNzVy3dofWxTJI199OsVZbH3aFtAdZYCYyQqVGrcq0JPiIP'),
-                      fit: BoxFit.cover,
-                    ),
+                    image: pregnancy.photoLocalPath != null
+                        ? DecorationImage(
+                            image: FileImage(File(pregnancy.photoLocalPath!)),
+                            fit: BoxFit.cover,
+                          )
+                        : const DecorationImage(
+                            image: NetworkImage('https://lh3.googleusercontent.com/aida-public/AB6AXuDxUahFZlLNPAFNq6UMAo6AhmVyEcbrAw9JrWGNMU0Zj1QWPwC_-dtX6XKTzfePUG6v4ut9P4ww6C2pkRR-tK0ACDfpzRaP-yTdCPqbJzJ7OR0_yGJaISJWceJKVcEGPVnFG-vt3aQRzsBvHEL-P43TS2N5veQ4V_l3XJlhtbiTSvqYfdm6t5x0-vFhMOFzkl-UoxPaj3vOQmA0R4vP3LEk2SeK4HIeGKNzVy3dofWxTJI199OsVZbH3aFtAdZYCYyQqVGrcq0JPiIP'),
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -167,7 +173,14 @@ class DashboardTab extends ConsumerWidget {
 
   Widget _buildHeartRateCard(BuildContext context, bool isConnected, bool hasData, dynamic health) {
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, RouteConstants.heartRate),
+      onTap: () {
+        debugPrint('[SafeNest Nav] Dashboard -> Heart Rate tab');
+        Navigator.pushNamed(
+          context,
+          RouteConstants.vitals,
+          arguments: {'initialTab': 0},
+        );
+      },
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: _blushCardDecoration(),
@@ -204,7 +217,14 @@ class DashboardTab extends ConsumerWidget {
 
   Widget _buildBodyTempCard(BuildContext context, bool isConnected, bool hasData, dynamic health) {
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, RouteConstants.temperature),
+      onTap: () {
+        debugPrint('[SafeNest Nav] Dashboard -> Temperature tab');
+        Navigator.pushNamed(
+          context,
+          RouteConstants.vitals,
+          arguments: {'initialTab': 1},
+        );
+      },
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: _blushCardDecoration(),
@@ -229,6 +249,7 @@ class DashboardTab extends ConsumerWidget {
                     Text('°C', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF2D2D2D).withOpacity(0.6))),
                   ],
                 ),
+                const SizedBox(height: 8),
               ],
             ),
             const Icon(Icons.device_thermostat, color: Color(0xFFA68E86), size: 24),
@@ -238,7 +259,33 @@ class DashboardTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildSleepCard(BuildContext context) {
+  Widget _buildSleepCard(BuildContext context, WidgetRef ref) {
+    final sleepState = ref.watch(sleepTrackerProvider);
+    final lastSession = sleepState.lastSession;
+    final isTracking = sleepState.isTracking;
+
+    String sleepLabel;
+    String sleepSub;
+    String statusTag;
+    Color tagColor;
+
+    if (isTracking) {
+      sleepLabel = ref.read(sleepTrackerProvider.notifier).formattedElapsed;
+      sleepSub   = 'Tracking now…';
+      statusTag  = 'ACTIVE';
+      tagColor   = const Color(0xFFE68C6C);
+    } else if (lastSession != null) {
+      sleepLabel = lastSession.formattedDuration;
+      sleepSub   = 'Last session duration';
+      statusTag  = lastSession.qualityFromDuration.toUpperCase();
+      tagColor   = const Color(0xFF79B39B);
+    } else {
+      sleepLabel = '--';
+      sleepSub   = 'No sleep data';
+      statusTag  = 'READY';
+      tagColor   = const Color(0xFFE9A48E);
+    }
+
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, RouteConstants.sleep),
       child: Container(
@@ -257,24 +304,35 @@ class DashboardTab extends ConsumerWidget {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFF79B39B).withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
-                  child: Text('GOOD', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF79B39B))),
+                  decoration: BoxDecoration(color: tagColor.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                  child: Text(statusTag, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: tagColor)),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Text('SLEEP TRACKER', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: const Color(0xFFA68E86))),
             const SizedBox(height: 2),
-            Text('6h 45m', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D2D2D))),
+            Text(sleepLabel, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D2D2D))),
             const SizedBox(height: 4),
-            Text('Last night sleep', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFA68E86))),
+            Text(sleepSub, style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFA68E86))),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, RouteConstants.logsDetail, arguments: LogParameter.sleep),
+              child: Text('View Full Logs →', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFE9A48E))),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHydrationCard(BuildContext context) {
+  Widget _buildHydrationCard(BuildContext context, WidgetRef ref) {
+    final hydration = ref.watch(hydrationProvider);
+    // 250ml per cup
+    final cups = (hydration.intakeLiters / 0.25).round();
+    const goalCups = 8;
+    final pct = (hydration.intakeLiters / 2.0).clamp(0.0, 1.0);
+
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, RouteConstants.hydration),
       child: Container(
@@ -291,14 +349,21 @@ class DashboardTab extends ConsumerWidget {
                   decoration: BoxDecoration(color: const Color(0xFF6FA8DC).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                   child: const Icon(Icons.water_drop_outlined, color: Color(0xFF6FA8DC), size: 20),
                 ),
+                // mini bar
                 Row(
-                  children: [
-                    Container(width: 4, height: 12, decoration: BoxDecoration(color: const Color(0xFFE68C6C).withOpacity(0.4), borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(width: 2),
-                    Container(width: 4, height: 12, decoration: BoxDecoration(color: const Color(0xFFE68C6C), borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(width: 2),
-                    Container(width: 4, height: 12, decoration: BoxDecoration(color: const Color(0xFFE68C6C).withOpacity(0.4), borderRadius: BorderRadius.circular(2))),
-                  ],
+                  children: List.generate(3, (i) {
+                    final filled = (pct * 3) > i;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 2),
+                      child: Container(
+                        width: 4, height: 12,
+                        decoration: BoxDecoration(
+                          color: filled ? const Color(0xFFE68C6C) : const Color(0xFFE68C6C).withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    );
+                  }),
                 ),
               ],
             ),
@@ -309,13 +374,18 @@ class DashboardTab extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text('3/8', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D2D2D))),
+                Text('$cups/$goalCups', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D2D2D))),
                 const SizedBox(width: 4),
                 Text('cups', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF2D2D2D).withOpacity(0.6))),
               ],
             ),
             const SizedBox(height: 4),
-            Text('Water intake', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFA68E86))),
+            Text('Water intake today', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFA68E86))),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, RouteConstants.logsDetail, arguments: LogParameter.hydration),
+              child: Text('View Logs →', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFE9A48E))),
+            ),
           ],
         ),
       ),
@@ -324,7 +394,14 @@ class DashboardTab extends ConsumerWidget {
 
   Widget _buildFallDetectionCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VitalsScreen(initialTab: 2))),
+      onTap: () {
+        debugPrint('[SafeNest Nav] Dashboard -> Fall Detection tab');
+        Navigator.pushNamed(
+          context,
+          RouteConstants.vitals,
+          arguments: {'initialTab': 2},
+        );
+      },
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: _blushCardDecoration(),
@@ -346,7 +423,12 @@ class DashboardTab extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text('All systems operational. No falls detected this week.', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFFA68E86))),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, RouteConstants.logsDetail, arguments: LogParameter.fallDetection),
+              child: Text('View Detection History →', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFE9A48E))),
+            ),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -390,7 +472,7 @@ class DashboardTab extends ConsumerWidget {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const AppointmentDetailsScreen()),
+        MaterialPageRoute(builder: (context) => AppointmentDetailsScreen()),
       ),
       child: Container(
         padding: const EdgeInsets.all(24),
@@ -422,11 +504,14 @@ class DashboardTab extends ConsumerWidget {
 
   BoxDecoration _blushCardDecoration() {
     return BoxDecoration(
-      color: Colors.white.withOpacity(0.75),
-      borderRadius: BorderRadius.circular(28),
-      border: Border.all(color: Colors.white.withOpacity(0.4)),
-      boxShadow: const [
-        BoxShadow(color: Color(0x26BAA59F), blurRadius: 32, offset: Offset(0, 8)),
+      color: const Color(0xFFFFF8F5), // Cream Background
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05), // rgba(0,0,0,0.05)
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
       ],
     );
   }
