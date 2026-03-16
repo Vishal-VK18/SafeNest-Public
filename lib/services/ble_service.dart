@@ -365,15 +365,22 @@ class BleService {
       final simOnline = model.simSignal > 0 || model.simBattery > 0;
       _updateDeviceStatus(_deviceStatus.copyWith(
         watch: _deviceStatus.watch.copyWith(
+          // Watch battery comes from bandBattery (part 5)
           batteryPercent: model.bandBattery > 0
               ? model.bandBattery
               : _deviceStatus.watch.batteryPercent,
-          signalLevel: model.simSignal > 0
-              ? model.simSignal
-              : _deviceStatus.watch.signalLevel,
+          // Watch signal is BLE signal — keep existing, do NOT overwrite with simSignal
+          signalLevel: _deviceStatus.watch.signalLevel,
           lastSeen: DateTime.now(),
         ),
-        simUnit: _deviceStatus.simUnit.copyWith(
+        simUnit: DeviceInfo(
+          // Always populate id + name so device tab shows SIM card
+          id: _deviceStatus.simUnit.id.isNotEmpty
+              ? _deviceStatus.simUnit.id
+              : 'sim-via-ble',
+          name: _deviceStatus.simUnit.name.isNotEmpty
+              ? _deviceStatus.simUnit.name
+              : 'SafeNest SIM',
           status: simOnline
               ? ConnectionStatus.connected
               : ConnectionStatus.disconnected,

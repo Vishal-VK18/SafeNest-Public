@@ -418,7 +418,7 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // SIM Card — only show if band is connected (SIM is part of band)
+                      // SIM Card — always show when band connected, reads from health packet
                       if (deviceStatus.watch.status == ConnectionStatus.connected) ...[
                         _buildDeviceCard(
                           type: 'SIM Module',
@@ -428,34 +428,16 @@ class _DeviceConnectionScreenState extends ConsumerState<DeviceConnectionScreen>
                               ? ConnectionStatus.connected
                               : ConnectionStatus.disconnected,
                           onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                          batteryPct: deviceStatus.watch.batteryPercent,
-                          signalPct: deviceStatus.watch.signalLevel,
+                          batteryPct: ref.watch(healthDataProvider).simBattery,
+                          signalPct: ref.watch(healthDataProvider).simSignal,
                         ),
                         const SizedBox(height: 24),
-
-                        // SIM Card — only show if band is connected (SIM is part of band)
-                        if (deviceStatus.watch.status == ConnectionStatus.connected) ...[
-                          _buildDeviceCard(
-                            type: 'SIM Module',
-                            deviceName: 'SafeNest SIM',
-                            icon: Icons.sim_card_rounded,
-                            status: deviceStatus.simUnit.status,
-                            onReconnect: () => ref.read(deviceStatusProvider.notifier).reconnect(),
-                            batteryPct: deviceStatus.simUnit.batteryPercent,
-                            signalPct: deviceStatus.simUnit.signalLevel,
-                          ),
-                          const SizedBox(height: 24),
-                        ] else ...[
-                          _buildSimOfflineCard(),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Nearby devices scan section
-                        _buildScanSection(),
+                      ] else ...[
+                        _buildSimOfflineCard(),
                         const SizedBox(height: 24),
                       ],
 
-                      // Nearby devices scan section
+                      // Nearby devices scan section — single instance
                       _buildScanSection(),
                       const SizedBox(height: 24),
 

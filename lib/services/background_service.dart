@@ -165,7 +165,8 @@ class BackgroundService {
     FlutterForegroundTask.sendDataToTask(data);
 
     // Write to native SharedPreferences
-    // simOffline comes directly from BLE simSignal value — most reliable source
+    // simOnline = simSignal > 0 (ESP sends 0 only when SIM fully offline)
+    // simOffline = false means SIM is ON — native watchdog will NOT call via phone
     _writeAlertsToPrefs(
       fall: data['fall'] == true,
       tempAlert: data['tempAlert'] == true,

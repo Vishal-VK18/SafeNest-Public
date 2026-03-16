@@ -175,10 +175,9 @@ Future<void> _initServicesAsync() async {
 
       // Forward BLE health data to background isolate AND native watchdog
       BleService.instance.healthStream.listen((health) {
-        // Derive SIM status directly from BLE packet — most reliable
-        // simSignal = 0 means SIM module is off/offline
-        // simSignal > 0 means SIM module is on and has network
-        final simOffline = health.simSignal == 0;
+        // simOffline = true ONLY if simSignal is 0 AND simBattery is 0
+        // simSignal alone can be 0 briefly during boot — battery confirms SIM is truly off
+        final simOffline = health.simSignal == 0 && health.simBattery == 0;
 
         final data = {
           'fall': health.fallDetected,

@@ -82,22 +82,37 @@ class SafeNestForegroundService : Service() {
             "Poll — fall:$fall temp:$temp simOffline:$simOffline cooldown:$onCooldown")
 
         // Fall — leading edge
+        // Only call via phone if SIM module is confirmed offline
+        // If SIM is online, ESP32 handles the call directly via A7670E
         if (fall && !lastFall && !onCooldown) {
-            Log.d("SafeNestFGService", "🚨 FALL DETECTED")
-            updateNotification("🚨 FALL DETECTED", "Emergency call being placed!")
+            Log.d("SafeNestFGService", "🚨 FALL DETECTED — simOffline:$simOffline")
+            updateNotification("🚨 FALL DETECTED", 
+                if (simOffline) "Emergency call via phone..." else "SIM module calling...")
             if (simOffline) {
+                // SIM is truly offline — fallback to phone call
+                Log.d("SafeNestFGService", "SIM offline — placing phone call")
                 lastCallTime = now
                 EmergencyCallService.placeCall(applicationContext, reason = "FALL DETECTED")
+            } else {
+                // SIM is online — ESP32 already placed the call via A7670E
+                // Just log and notify, do NOT call via phone
+                Log.d("SafeNestFGService", "SIM online — ESP32 handles call, phone stays silent")
+                lastCallTime = now // still set cooldown to avoid double trigger
             }
         }
 
         // Temp — leading edge
         if (temp && !lastTemp && !onCooldown) {
-            Log.d("SafeNestFGService", "🌡️ HIGH TEMP")
-            updateNotification("🌡️ HIGH TEMPERATURE", "Emergency call being placed!")
+            Log.d("SafeNestFGService", "🌡️ HIGH TEMP — simOffline:$simOffline")
+            updateNotification("🌡️ HIGH TEMPERATURE",
+                if (simOffline) "Emergency call via phone..." else "SIM module calling...")
             if (simOffline) {
+                Log.d("SafeNestFGService", "SIM offline — placing phone call")
                 lastCallTime = now
                 EmergencyCallService.placeCall(applicationContext, reason = "HIGH TEMP")
+            } else {
+                Log.d("SafeNestFGService", "SIM online — ESP32 handles call, phone stays silent")
+                lastCallTime = now
             }
         }
 

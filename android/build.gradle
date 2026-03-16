@@ -1,4 +1,10 @@
 // Top-level build.gradle — no buildscript block needed with the new declarative plugin approach.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
 allprojects {
     repositories {
         google()

@@ -14,6 +14,7 @@ import '../models/safety_event_model.dart';
 import '../models/device_status_model.dart';
 import '../services/emergency_call_service.dart';
 import '../services/notification_service.dart';
+import '../widgets/safe_nest_bottom_navigation.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -39,23 +40,28 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
     // Listen for fall/temp alerts — if SIM offline, place call from phone
     ref.listenManual(healthDataProvider, (prev, next) {
-      final simOffline = ref.read(deviceStatusProvider).simUnit.status
-          != ConnectionStatus.connected;
+        // Only call via phone if SIM is confirmed offline
+        // simOffline = simSignal AND simBattery both zero
+        final simOffline = next.simSignal == 0 && next.simBattery == 0;
 
       // Fall — leading edge only
       if (next.fallDetected && (prev == null || !prev.fallDetected)) {
-        EmergencyCallService.instance.callIfNeeded(
-          simOffline: simOffline,
-          reason: 'FALL DETECTED',
-        );
+        if (simOffline) {
+          EmergencyCallService.instance.callIfNeeded(
+            simOffline: simOffline,
+            reason: 'FALL DETECTED',
+          );
+        }
       }
 
       // High temp — leading edge only (tempAlert: 1 = high)
       if (next.tempAlert == 1 && (prev == null || prev.tempAlert != 1)) {
-        EmergencyCallService.instance.callIfNeeded(
-          simOffline: simOffline,
-          reason: 'HIGH TEMP: ${next.temperature.toStringAsFixed(1)}°C',
-        );
+        if (simOffline) {
+          EmergencyCallService.instance.callIfNeeded(
+            simOffline: simOffline,
+            reason: 'HIGH TEMP: ${next.temperature.toStringAsFixed(1)}°C',
+          );
+        }
       }
     });
   }

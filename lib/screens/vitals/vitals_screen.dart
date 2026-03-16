@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/providers.dart';
 import '../../core/constants/route_constants.dart';
 import '../../models/safety_event_model.dart';
+import '../../widgets/safe_nest_bottom_navigation.dart';
 
 // ─── Blush palette ────────────────────────────────────────────────────────────
 const _coral     = Color(0xFFE9A48E);
