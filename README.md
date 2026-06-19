@@ -124,7 +124,7 @@ and install directly on your Android device.
 
 ## 🌐 Website
 
-[safe-nest-site.vercel.app](https://safe-nest-site.vercel.app)
+[https://safenestc.netlify.app/](https://safenestc.netlify.app/)
 
 ---
 
